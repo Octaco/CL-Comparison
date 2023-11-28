@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModel
 ###############################################################################
 # Experiment Setup
 ###############################################################################
-dataset = '20ng'    #[ '20ng', 'R8', 'R52', 'ohsumed', 'mr']
+dataset = 'codebert-base'   
 n_labels = 20 #[20,8,52,23,2]
 num_epochs = 10
 
