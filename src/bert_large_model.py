@@ -10,6 +10,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import nn, einsum
+from info_nce import InfoNCE, info_nce
 
 from torch import cuda
 
@@ -118,7 +119,7 @@ class CustomDataset(TensorDataset):
             add_special_tokens=False,
             max_length=self.max_len,
             truncation=True,
-            pad_to_max_length=True,
+            padding='max_length',
             return_token_type_ids=False
         )
         ids = inputs['input_ids']
@@ -182,6 +183,7 @@ print()
 #dataset_validation = torch.utils.data.TensorDataset(validation_set, validation_set2)
 
 dataloader_train = DataLoader(training_set, **train_params)
+dataloader_train2 = DataLoader(training_set2, **train_params)
 
 
 
@@ -197,12 +199,47 @@ logging.basicConfig(level=logging.ERROR)
 model = RobertaModel.from_pretrained("microsoft/codebert-base")
 model.to(device)
 
-for index, item in enumerate(dataloader_train):
-    id = item["ids"]
-    mask = item["mask"]
-    output = model(id, mask)
-    print(output[0].shape)
-    break
+loss_function = InfoNCE()
+criterion = nn.CrossEntropyLoss()
+
+for epoch in range(num_epochs):
+    dataloader_iterator = iter(dataloader_train)
+
+    for index, data1 in enumerate(dataloader_train2):
+        try:
+            data2 = next(dataloader_iterator)
+            id_1 = data1["ids"]
+            id_2 = data2["ids"]
+
+            mask_1 = data1["mask"]
+            mask_2 = data2["mask"]
+
+            output_1 = model(id_1, mask_1)
+            output_2 = model(id_2, mask_2)
+
+            # loss = criterion(output_1[0], output_2[0])
+            for i in range(len(output_1[0])):
+                loss = loss_function(output_1[0][i], output_2[0][i])
+                print(loss)
+
+            print("_________________________")
+            #print(output_1[0].shape)
+            #print(output_2[0].shape)
+
+
+        except StopIteration:
+            dataloader_iterator = iter(dataloader_train)
+            data2 = next(dataloader_iterator)
+
+
+
+
+# for index, item in enumerate(dataloader_train):
+#     id = item["ids"]
+#     mask = item["mask"]
+#     output = model(id, mask)
+#     print(output[0].shape)
+#     break
 
 
 
