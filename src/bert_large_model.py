@@ -1,5 +1,6 @@
 import torch
 import pandas as pd
+from datasets import load_dataset
 import numpy as np
 
 
@@ -11,7 +12,8 @@ from transformers import AutoTokenizer, AutoModel
 ###############################################################################
 # Experiment Setup
 ###############################################################################
-dataset = 'codebert-base'   
+dataset = 'codebert-base'
+language = 'python'
 n_labels = 20 #[20,8,52,23,2]
 num_epochs = 10
 
@@ -24,11 +26,18 @@ LEARNING_RATE = 1e-5
 ###############################################################################
 # Load Data
 ###############################################################################
+code_search_dataset = load_dataset('code_search_net', language)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-tokenizer = RobertaTokenizer.from_pretrained("microsoft/codebert-base")
-model = RobertaModel.from_pretrained("microsoft/codebert-base")
-model.to(device)
+train_data = code_search_dataset['train']
+test_data = code_search_dataset['test']
+
+# columns in the dataset: ['repository_name', 'func_path_in_repository', 'func_name', 'whole_func_string',
+# 'language', 'func_code_string', 'func_code_tokens', 'func_documentation_string', 'func_documentation_tokens',
+# 'split_name', 'func_code_url']"
+function_names = train_data['func_name']
+print(function_names)
+
+
 
 
 ################################################################################
@@ -37,8 +46,7 @@ model.to(device)
 
 train_labels = []
 test_labels = []
-train_data = []
-test_data = []
+
 
 
 
@@ -62,13 +70,20 @@ print("Number of test labels ",len(test_df['labels']))
 
 
 
+###############################################################################
+# load model and tokenizer
+###############################################################################
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+tokenizer = RobertaTokenizer.from_pretrained("microsoft/codebert-base")
+model = RobertaModel.from_pretrained("microsoft/codebert-base")
+model.to(device)
+
 
 ###############################################################################
 # NL-PL embeddings
 ###############################################################################
 
-tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
-model = AutoModel.from_pretrained("microsoft/codebert-base")
 n1_tokens=tokenizer.tokenize("return maximum value")
 code_tokens = tokenizer.tokenize("def max(a,b): if a>b: return a else return b")
 tokens = [tokenizer.cls_token] + n1_tokens + [tokenizer.sep_token] + code_tokens + [tokenizer.eos_token]
