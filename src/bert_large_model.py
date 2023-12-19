@@ -217,10 +217,16 @@ for epoch in range(num_epochs):
             output_1 = model(id_1, mask_1)
             output_2 = model(id_2, mask_2)
 
-            # loss = criterion(output_1[0], output_2[0])
-            for i in range(len(output_1[0])):
-                loss = loss_function(output_1[0][i], output_2[0][i])
-                print(loss)
+            loss = criterion(output_1[0], output_2[0])
+            print(loss)
+            loss.backward()
+
+
+
+            # for i in range(len(output_1[0])):
+            #     loss = loss_function(output_1[0][i], output_2[0][i])
+            #     loss.backward()
+            #     print(loss)
 
             print("_________________________")
             #print(output_1[0].shape)
