@@ -134,13 +134,14 @@ class CustomDataset(TensorDataset):
         }
 
 
-
+#text
 train_size = 0.8
 train_dataset = train_df1.sample(frac=train_size, random_state=200)
 valid_dataset = train_df1.drop(train_dataset.index).reset_index(drop=True)
 train_dataset = train_dataset.reset_index(drop=True)
 test_dataset = test_df1.reset_index(drop=True)
 
+#code
 train_dataset2 = train_df2.sample(frac=train_size, random_state=200)
 valid_dataset2= train_df2.drop(train_dataset.index).reset_index(drop=True)
 train_dataset2 = train_dataset.reset_index(drop=True)

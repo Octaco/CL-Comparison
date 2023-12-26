@@ -62,7 +62,7 @@ def load_data(args):
     return train_df1, train_df2, test_df1, test_df2
 
 
-def main():
+def main(randomt=None):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--loss_formulation", default="INFO_NCE", type=str, required=False,
@@ -95,12 +95,15 @@ def main():
     args.num_epochs = 10
 
     args.MAX_LEN = 512
-    args.TRAIN_BATCH_SIZE = 16
-    args.TEST_BATCH_SIZE = 16
-    args.VALID_BATCH_SIZE = 16
+    args.TRAIN_BATCH_SIZE = 1
+    args.TEST_BATCH_SIZE = 1
+    args.VALID_BATCH_SIZE = 1
     args.LEARNING_RATE = 1e-5
     args.train_size = 0.8
 
+
+
+#remove
     # Setup CUDA, GPU & distributed training
     if args.local_rank == -1 or args.no_cuda:
         device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
@@ -184,26 +187,46 @@ def main():
         raise ValueError("Loss formulation selected is not valid. Please select one of the following: " +
                          ", ".join(LOSS_FORMULATIONS))
 
-    loss_formulation = nn.CrossEntropyLoss()
 
     for epoch in range(args.num_epochs):
         dataloader_iterator = iter(dataloader_train)
+        data2 = next(dataloader_iterator)
 
         for index, data1 in enumerate(dataloader_train2):
             try:
-                data2 = next(dataloader_iterator)
+
                 id_1 = data1["ids"]
                 id_2 = data2["ids"]
 
                 mask_1 = data1["mask"]
                 mask_2 = data2["mask"]
 
-                output_1 = model(id_1, mask_1)
-                output_2 = model(id_2, mask_2)
+                query = model(id_1, mask_1)[1]  # using pooled values
+                positive_key = model(id_2, mask_2)[1]  # using pooled values
 
-                #what is the querry, what is the positive key, what is the negative key?
+                #negative keys
 
-                loss = loss_formulation(output_1[0], output_2[0])
+                # subsetindices = [random.randint(0, 15) for i in range(15)]
+
+                sample_indices = list(range(len(dataloader_train2)))
+                sample_indices.remove(index)
+                sample_idx = random.choices(sample_indices, k=15)
+                sample_indices.append(index)
+
+                subset = torch.utils.data.Subset(training_set2, sample_idx)
+                dataloader_subset = DataLoader(subset, **train_params)
+
+                negative_keys = []
+                for index, data in enumerate(dataloader_subset):
+                    id_3 = data["ids"]
+                    mask_3 = data["mask"]
+                    negative_key = model(id_3, mask_3)[1]
+                    negative_keys.append(negative_key)
+
+                #what is the query,
+
+                loss = loss_formulation(query, positive_key, negative_keys)
+
                 print(loss)
                 loss.backward()
 
@@ -213,9 +236,9 @@ def main():
                 #     print(loss)
 
                 print("_________________________")
-                # print(output_1[0].shape)
-                # print(output_2[0].shape)
-
+                print(query[0].shape)
+                print(positive_key[0].shape)
+                data2 = next(dataloader_iterator)
 
             except StopIteration:
                 dataloader_iterator = iter(dataloader_train)
