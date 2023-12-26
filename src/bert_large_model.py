@@ -208,15 +208,29 @@ for epoch in range(num_epochs):
 
     for index, data1 in enumerate(dataloader_train2):
         try:
+
+
+
+
             data2 = next(dataloader_iterator)
+            rand_index = 3
+            negative_keys = dataloader_train2.__getitem__(rand_index)
+
+
+
+
+
+
             id_1 = data1["ids"]
             id_2 = data2["ids"]
 
             mask_1 = data1["mask"]
             mask_2 = data2["mask"]
 
-            output_1 = model(id_1, mask_1)
-            output_2 = model(id_2, mask_2)
+            querry = model(id_1, mask_1)[1] #using pooled values
+            positive_keys = model(id_2, mask_2)[1]
+
+            negative_keys = torch.randn(1, 768)
 
             loss = criterion(output_1[0], output_2[0])
             print(loss)
@@ -228,6 +242,9 @@ for epoch in range(num_epochs):
             #     loss = loss_function(output_1[0][i], output_2[0][i])
             #     loss.backward()
             #     print(loss)
+
+            loss = loss_function(querry, positive_keys, negative_keys)
+            print(loss)
 
             print("_________________________")
             #print(output_1[0].shape)
