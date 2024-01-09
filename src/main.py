@@ -11,6 +11,7 @@ import torch
 from torch import nn
 
 from datasets import load_dataset
+from datetime import datetime
 from utils.CustomDataset import CustomDataset
 from info_nce import InfoNCE, info_nce
 
@@ -21,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 LOSS_FORMULATIONS = ['triplet', 'INFO_NCE', 'Soft_nearest_neighbour']
 LEARNING_ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
+
+mrr_path = '../data/MRR.txt'
 
 
 def set_seed(args):
@@ -94,8 +97,6 @@ def main(randomt=None):
     args.VALID_BATCH_SIZE = 1
     args.LEARNING_RATE = 1e-5
     args.train_size = 0.8
-
-
 
     # Setup CUDA, GPU
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
@@ -175,10 +176,14 @@ def main(randomt=None):
     # training
     train(args, loss_formulation, model, train_params, training_set, training_set2)
 
-
     # prediction
-
     distances = validation(model, test_params, validation_set, validation_set2)
+
+    # evaluation
+    mrr = calculate_mrr_from_distances(distances)
+
+    # write mrr to file
+    write_mrr_to_file(args, mrr)
 
 
 def validation(model, test_params, validation_set, validation_set2):
@@ -236,7 +241,6 @@ def validation(model, test_params, validation_set, validation_set2):
 
 
 def train(args, loss_formulation, model, train_params, training_set, training_set2):
-
     dataloader_train = DataLoader(training_set, **train_params)
     dataloader_train2 = DataLoader(training_set2, **train_params)
 
@@ -296,7 +300,6 @@ def train(args, loss_formulation, model, train_params, training_set, training_se
                 dataloader_iterator = iter(dataloader_train)
                 data2 = next(dataloader_iterator)
 
-
             # querry, seperatly positve and negative and compare to querry.
             # -> 100 numbers each similarity between querry and positive / negative
             # training on training data, predition of cosine similarity  on test data.
@@ -315,9 +318,24 @@ def calculate_mrr_from_distances(distances_lists):
 
         ranks.append(rank)
 
+    assert distances_lists.__len__() == ranks.__len__()
     mrr = sum(1 / rank if rank != 0 else 0 for rank in ranks) / len(ranks)
     return mrr
 
+
+def write_mrr_to_file(args, mrr, test=False):
+    mrr_old = ""
+    with open(mrr_path, "r") as file:
+        mrr_old = file.read()
+
+    with open(mrr_path, "w") as file:
+        now = datetime.now().strftime("%d/%m/%Y, %H:%M")
+
+        if test:
+            mrr_new = f"{mrr_old}(test) {now}: {args.language} {mrr}\n"
+        else:
+            mrr_new = f"{mrr_old}{now}: {args.language} {mrr}\n"
+        file.write(mrr_new)
 
 
 # Press the green button in the gutter to run the script.
