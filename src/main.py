@@ -328,12 +328,12 @@ def write_mrr_to_file(args, mrr, test=False):
         mrr_old = file.read()
 
     with open(mrr_path, "w") as file:
-        now = datetime.now().strftime("%d/%m/%Y, %H:%M")
+        now = datetime.now().strftime("%d/%m/%Y,%H:%M")
 
         if test:
-            mrr_new = f"{mrr_old}(test) {now}: {args.language} {mrr}\n"
+            mrr_new = f"{mrr_old}(test) {now}:{args.language} {mrr}\n"
         else:
-            mrr_new = f"{mrr_old}{now}: {args.language} {mrr}\n"
+            mrr_new = f"{mrr_old}{now}:{args.language} {mrr}\n"
         file.write(mrr_new)
 
 
