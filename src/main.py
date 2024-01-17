@@ -161,8 +161,8 @@ def main(randomt=None):
     ##########################################################
 
     model = RobertaModel.from_pretrained(args.model_name)
-    model.to(args.device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.LEARNING_RATE)
+    model.to(args.device)
 
     if args.loss_formulation == 'triplet':
         loss_formulation = torch.nn.TripletMarginLoss(margin=1.0, p=2)
@@ -175,10 +175,10 @@ def main(randomt=None):
                          ", ".join(LOSS_FORMULATIONS))
 
     # training
-    # train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2)
+    train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2)
 
     # prediction
-    distances = evaluation(model, test_params, validation_set, validation_set2)
+    distances = evaluation(args,model, test_params, validation_set, validation_set2)
 
     # evaluation
     mrr = calculate_mrr_from_distances(distances)
@@ -187,7 +187,7 @@ def main(randomt=None):
     write_mrr_to_file(args, mrr)
 
 
-def evaluation(model, test_params, validation_set, validation_set2):
+def evaluation(args,model, test_params, validation_set, validation_set2):
     dataloader_eval = DataLoader(validation_set, **test_params)
     dataloader_eval2 = DataLoader(validation_set2, **test_params)
     dataloader_iterator = iter(dataloader_eval)
@@ -196,10 +196,10 @@ def evaluation(model, test_params, validation_set, validation_set2):
     for index, data1 in enumerate(dataloader_eval2):
 
         try:
-            id_1 = data1["ids"]
-            id_2 = data2["ids"]
-            mask_1 = data1["mask"]
-            mask_2 = data2["mask"]
+            id_1 = data1["ids"].to(args.device)
+            id_2 = data2["ids"].to(args.device)
+            mask_1 = data1["mask"].to(args.device)
+            mask_2 = data2["mask"].to(args.device)
 
             query = model(id_1, mask_1)[1]  # using pooled values
             positive_key = model(id_2, mask_2)[1]  # using pooled values
@@ -253,11 +253,11 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
         for index, data1 in enumerate(dataloader_train2):
             try:
 
-                id_1 = data1["ids"]
-                id_2 = data2["ids"]
+                id_1 = data1["ids"].to(args.device)
+                id_2 = data2["ids"].to(args.device)
 
-                mask_1 = data1["mask"]
-                mask_2 = data2["mask"]
+                mask_1 = data1["mask"].to(args.device)
+                mask_2 = data2["mask"].to(args.device)
 
                 query = model(id_1, mask_1)[1]  # using pooled values
                 # query = query.unsqueeze(0)
@@ -275,8 +275,8 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
                 negative_keys = []
                 for index2, data in enumerate(dataloader_subset):
-                    id_3 = data["ids"]
-                    mask_3 = data["mask"]
+                    id_3 = data["ids"].to(args.device)
+                    mask_3 = data["mask"].to(args.device)
                     negative_key = model(id_3, mask_3)[1]
                     negative_keys.append(negative_key.clone().detach())
 
