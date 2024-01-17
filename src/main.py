@@ -164,7 +164,7 @@ def main(randomt=None):
     if args.loss_formulation == 'triplet':
         loss_formulation = torch.nn.TripletMarginLoss(margin=1.0, p=2)
     elif args.loss_formulation == 'INFO_NCE':
-        loss_formulation = InfoNCE(negative_mode='paired')
+        loss_formulation = InfoNCE(negative_mode='unpaired')
     elif args.loss_formulation == 'Soft_nearest_neighbour':
         loss_formulation = torch.nn.SoftMarginLoss()
     else:
@@ -185,6 +185,9 @@ def main(randomt=None):
 
 
 def evaluation(args,model, test_params, validation_set, validation_set2):
+    print("______________________________________________________________")
+    print("evaluation")
+
     dataloader_eval = DataLoader(validation_set, **test_params)
     dataloader_eval2 = DataLoader(validation_set2, **test_params)
     dataloader_iterator = iter(dataloader_eval)
@@ -239,6 +242,8 @@ def evaluation(args,model, test_params, validation_set, validation_set2):
 
 
 def train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2):
+    print("______________________________________________________________")
+    print("training")
     dataloader_train = DataLoader(training_set, **train_params)
     dataloader_train2 = DataLoader(training_set2, **train_params)
 
@@ -277,7 +282,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
                     negative_key = model(id_3, mask_3)[1]
                     negative_keys.append(negative_key.clone().detach())
 
-                negative_keys_reshaped = torch.stack(negative_keys, dim=1)
+                negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
                 loss = loss_formulation(query, positive_key, negative_keys_reshaped)
                 summed_loss.append(loss)
