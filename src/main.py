@@ -99,7 +99,7 @@ def main(randomt=None):
     args.train_size = 0.8
 
     # Setup CUDA, GPU
-    device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
 
     args.device = device
