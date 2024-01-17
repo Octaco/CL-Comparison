@@ -162,11 +162,12 @@ def main(randomt=None):
 
     model = RobertaModel.from_pretrained(args.model_name)
     model.to(args.device)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=args.LEARNING_RATE)
 
     if args.loss_formulation == 'triplet':
         loss_formulation = torch.nn.TripletMarginLoss(margin=1.0, p=2)
     elif args.loss_formulation == 'INFO_NCE':
-        loss_formulation = InfoNCE(negative_mode='unpaired')
+        loss_formulation = InfoNCE(negative_mode='paired')
     elif args.loss_formulation == 'Soft_nearest_neighbour':
         loss_formulation = torch.nn.SoftMarginLoss()
     else:
@@ -174,10 +175,10 @@ def main(randomt=None):
                          ", ".join(LOSS_FORMULATIONS))
 
     # training
-    train(args, loss_formulation, model, train_params, training_set, training_set2)
+    # train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2)
 
     # prediction
-    distances = validation(model, test_params, validation_set, validation_set2)
+    distances = evaluation(model, test_params, validation_set, validation_set2)
 
     # evaluation
     mrr = calculate_mrr_from_distances(distances)
@@ -186,7 +187,7 @@ def main(randomt=None):
     write_mrr_to_file(args, mrr)
 
 
-def validation(model, test_params, validation_set, validation_set2):
+def evaluation(model, test_params, validation_set, validation_set2):
     dataloader_eval = DataLoader(validation_set, **test_params)
     dataloader_eval2 = DataLoader(validation_set2, **test_params)
     dataloader_iterator = iter(dataloader_eval)
@@ -240,13 +241,14 @@ def validation(model, test_params, validation_set, validation_set2):
     return all_distances
 
 
-def train(args, loss_formulation, model, train_params, training_set, training_set2):
+def train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2):
     dataloader_train = DataLoader(training_set, **train_params)
     dataloader_train2 = DataLoader(training_set2, **train_params)
 
     for epoch in range(args.num_epochs):
         dataloader_iterator = iter(dataloader_train)
         data2 = next(dataloader_iterator)
+        summed_loss = []
 
         for index, data1 in enumerate(dataloader_train2):
             try:
@@ -258,12 +260,11 @@ def train(args, loss_formulation, model, train_params, training_set, training_se
                 mask_2 = data2["mask"]
 
                 query = model(id_1, mask_1)[1]  # using pooled values
+                # query = query.unsqueeze(0)
                 positive_key = model(id_2, mask_2)[1]  # using pooled values
+                # positive_key = positive_key.unsqueeze(0)
 
                 # negative keys
-
-                # subsetindices = [random.randint(0, 15) for i in range(15)]
-
                 sample_indices = list(range(len(dataloader_train2)))
                 sample_indices.remove(index)
                 sample_idx = random.choices(sample_indices, k=15)
@@ -279,26 +280,22 @@ def train(args, loss_formulation, model, train_params, training_set, training_se
                     negative_key = model(id_3, mask_3)[1]
                     negative_keys.append(negative_key.clone().detach())
 
-                negative_keys_reshaped = torch.cat(negative_keys, 0)
-                # what is the query,
+                negative_keys_reshaped = torch.stack(negative_keys, dim=1)
+
                 loss = loss_formulation(query, positive_key, negative_keys_reshaped)
+                summed_loss.append(loss)
 
-                print(loss)
+                optimizer.zero_grad()
                 loss.backward()
-
-                # for i in range(len(output_1[0])):
-                #     loss = loss_function(output_1[0][i], output_2[0][i])
-                #     loss.backward()
-                #     print(loss)
-
-                print("_________________________")
-                print(query[0].shape)
-                print(positive_key[0].shape)
+                optimizer.step()
                 data2 = next(dataloader_iterator)
 
             except StopIteration:
                 dataloader_iterator = iter(dataloader_train)
                 data2 = next(dataloader_iterator)
+
+        averaged_loss = sum(summed_loss) / len(summed_loss)
+        print(f"Epoch {epoch} loss: {averaged_loss}")
 
             # querry, seperatly positve and negative and compare to querry.
             # -> 100 numbers each similarity between querry and positive / negative
@@ -314,7 +311,7 @@ def calculate_mrr_from_distances(distances_lists):
         min_distance_index = min(range(len(distances)), key=distances.__getitem__)
 
         # If the minimum distance is at index 0, consider it as the rank 1
-        rank = min_distance_index + 1 if min_distance_index == 0 else len(distances) + 1
+        rank = 1 if min_distance_index == 0 else min_distance_index + 1
 
         ranks.append(rank)
 
