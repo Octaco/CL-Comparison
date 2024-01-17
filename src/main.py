@@ -1,19 +1,16 @@
 # This is a sample Python script.
 import argparse
-import glob
 import logging
-import os
 import random
 
 import pandas as pd
 import numpy as np
 import torch
-from torch import nn
 
 from datasets import load_dataset
 from datetime import datetime
 from utils.CustomDataset import CustomDataset
-from info_nce import InfoNCE, info_nce
+from info_nce import InfoNCE
 
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 from transformers import RobertaModel, RobertaConfig, RobertaTokenizer
