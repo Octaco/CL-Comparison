@@ -262,7 +262,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
                 mask_1 = data1["mask"].to(args.device)
                 mask_2 = data2["mask"].to(args.device)
-                logger.debug(f"Epoch {epoch} started, batch {index} started")
+                logger.debug(f"Epoch {epoch} batch {index} started")
 
                 query = model(id_1, mask_1)[1]  # using pooled values
                 # query = query.unsqueeze(0)
@@ -280,7 +280,6 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
                 negative_keys = []
                 for index2, data in enumerate(dataloader_subset):
-                    logger.debug(f"Epoch {epoch} started, batch {index} started, negative batch {index2} started")
                     id_3 = data["ids"].to(args.device)
                     mask_3 = data["mask"].to(args.device)
                     negative_key = model(id_3, mask_3)[1]
@@ -289,7 +288,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
                 negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
                 loss = loss_formulation(query, positive_key, negative_keys_reshaped)
-                logger.debug(f"Epoch {epoch} started, batch {index} finished, loss: {loss}")
+                logger.debug(f"Epoch {epoch} batch {index} finished, loss: {loss}")
                 summed_loss.append(loss)
 
                 optimizer.zero_grad()
