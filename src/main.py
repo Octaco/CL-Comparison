@@ -77,8 +77,11 @@ def main(randomt=None):
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
 
-    parser.add_argument("--local_rank", type=int, default=-1,
+    parser.add_argument("--local_rank", type=int, default=-2,
                         help="For distributed training: local_rank")
+
+    parser.add_argument("--log_path", default='../logging', type=str, required=False,
+                        help="Path to log files")
 
     args = parser.parse_args()
 
@@ -102,7 +105,8 @@ def main(randomt=None):
     args.device = device
 
     # Setup logging
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+    logging.basicConfig(filename=args.log_path + '/log_' + args.language + '.txt',
+                        format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
     logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s",
@@ -335,6 +339,11 @@ def write_mrr_to_file(args, mrr, test=False):
         else:
             mrr_new = f"{mrr_old}{now}:{args.language} {mrr}\n"
         file.write(mrr_new)
+
+
+def log(args, data):
+
+    pass
 
 
 # Press the green button in the gutter to run the script.
