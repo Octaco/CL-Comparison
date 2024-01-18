@@ -249,7 +249,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
     dataloader_train = DataLoader(training_set, **train_params)
     dataloader_train2 = DataLoader(training_set2, **train_params)
     for epoch in range(args.num_epochs):
-        logger.debug(f"Epoch {epoch}")
+        logger.debug(f"Epoch {epoch} started")
         dataloader_iterator = iter(dataloader_train)
         data2 = next(dataloader_iterator)
         summed_loss = []
@@ -262,6 +262,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
                 mask_1 = data1["mask"].to(args.device)
                 mask_2 = data2["mask"].to(args.device)
+                logger.debug(f"Epoch {epoch} started, batch {index} started")
 
                 query = model(id_1, mask_1)[1]  # using pooled values
                 # query = query.unsqueeze(0)
@@ -279,6 +280,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
                 negative_keys = []
                 for index2, data in enumerate(dataloader_subset):
+                    logger.debug(f"Epoch {epoch} started, batch {index} started, negative batch {index2} started")
                     id_3 = data["ids"].to(args.device)
                     mask_3 = data["mask"].to(args.device)
                     negative_key = model(id_3, mask_3)[1]
@@ -287,6 +289,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
                 negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
                 loss = loss_formulation(query, positive_key, negative_keys_reshaped)
+                logger.debug(f"Epoch {epoch} started, batch {index} finished, loss: {loss}")
                 summed_loss.append(loss)
 
                 optimizer.zero_grad()
@@ -299,7 +302,9 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
                 data2 = next(dataloader_iterator)
 
         averaged_loss = sum(summed_loss) / len(summed_loss)
-        print(f"Epoch {epoch} loss: {averaged_loss}")
+        logger.debug(f"Epoch {epoch} finished, loss: {averaged_loss}")
+
+    logger.debug("***** Finished training *****")
 
             # querry, seperatly positve and negative and compare to querry.
             # -> 100 numbers each similarity between querry and positive / negative
