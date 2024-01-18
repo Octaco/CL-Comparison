@@ -108,7 +108,7 @@ def main(randomt=None):
     logging.basicConfig(filename=args.log_path + '/log_' + args.language + '.txt',
                         format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
+                        level=logging.INFO if args.local_rank in [-1, 0] else logging.DEBUG)
     logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s",
                    args.local_rank, device, args.n_gpu, bool(args.local_rank != -1))
 
@@ -189,8 +189,7 @@ def main(randomt=None):
 
 
 def evaluation(args,model, test_params, validation_set, validation_set2):
-    print("______________________________________________________________")
-    print("evaluation")
+    logger.debug("***** Running evaluation *****")
 
     dataloader_eval = DataLoader(validation_set, **test_params)
     dataloader_eval2 = DataLoader(validation_set2, **test_params)
@@ -246,12 +245,11 @@ def evaluation(args,model, test_params, validation_set, validation_set2):
 
 
 def train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2):
-    print("______________________________________________________________")
-    print("training")
+    logger.debug("***** Running training *****")
     dataloader_train = DataLoader(training_set, **train_params)
     dataloader_train2 = DataLoader(training_set2, **train_params)
-
     for epoch in range(args.num_epochs):
+        logger.debug(f"Epoch {epoch}")
         dataloader_iterator = iter(dataloader_train)
         data2 = next(dataloader_iterator)
         summed_loss = []
