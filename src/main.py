@@ -127,7 +127,7 @@ def main(randomt=None):
 
     train_dataset2 = train_df2.sample(frac=train_size, random_state=200)
     valid_dataset2 = train_df2.drop(train_dataset.index).reset_index(drop=True)
-    train_dataset2 = train_dataset.reset_index(drop=True)
+    train_dataset2 = train_dataset2.reset_index(drop=True)
     test_dataset2 = test_df2.reset_index(drop=True)
 
     print("TRAIN Dataset: {}".format(train_dataset.shape))
