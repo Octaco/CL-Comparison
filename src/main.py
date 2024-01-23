@@ -217,20 +217,19 @@ def evaluation(args,model, test_params, validation_set, validation_set2):
 
             negative_keys = []
             for index2, data in enumerate(dataloader_subset):
-                id_3 = data["ids"]
-                mask_3 = data["mask"]
+                id_3 = data["ids"].to(args.device)
+                mask_3 = data["mask"].to(args.device)
                 negative_key = model(id_3, mask_3)[1]
-                negative_keys.append(torch.tensor(negative_key.clone().detach().numpy()))
-                print(index2)
+                negative_keys.append(torch.tensor(negative_key.clone().detach()))
 
-            negative_keys_reshaped = torch.cat(negative_keys, 0)
+            negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
             # calc Euclidean distance for positive key at first position
-            distances = [np.linalg.norm((query - positive_key).detach().numpy())]
+            distances = [np.linalg.norm((query - positive_key).detach().cpu().numpy())]
 
             for i in range(len(negative_keys_reshaped)):
                 # calc Euclidean distance for negative keys
-                distance = np.linalg.norm((query - negative_keys_reshaped[i]).detach().numpy())
+                distance = np.linalg.norm((query - negative_keys_reshaped[i]).detach().cpu().numpy())
 
                 distances.append(distance)
 
