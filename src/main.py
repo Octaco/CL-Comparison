@@ -89,7 +89,7 @@ def main(randomt=None):
     args.model_name = 'microsoft/codebert-base'
     args.language = 'ruby'
     args.n_labels = 20
-    args.num_epochs = 10
+    args.num_epochs = 5
 
     args.MAX_LEN = 512
     args.TRAIN_BATCH_SIZE = 1
@@ -271,7 +271,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
                 # negative keys
                 sample_indices = list(range(len(dataloader_train2)))
                 sample_indices.remove(index)
-                sample_idx = random.choices(sample_indices, k=15)
+                sample_idx = random.choices(sample_indices, k=7)
                 # sample_indices.append(index)
 
                 subset = torch.utils.data.Subset(training_set2, sample_idx)
