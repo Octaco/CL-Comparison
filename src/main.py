@@ -311,19 +311,21 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
 
 def calculate_mrr_from_distances(distances_lists):
-    ranks = []
+    total_reciprocal_rank = 0
 
     for distances in distances_lists:
-        # Find the index of the minimum distance (assuming lower distance is better)
-        min_distance_index = min(range(len(distances)), key=distances.__getitem__)
+        # Sort distances and get the index of the first element in the sorted list
+        rank = sorted(range(len(distances)), key=lambda k: distances[k])[0]
 
-        # If the minimum distance is at index 0, consider it as the rank 1
-        rank = 1 if min_distance_index == 0 else min_distance_index + 1
+        # Calculate reciprocal rank
+        reciprocal_rank = 1 / (rank + 1)
 
-        ranks.append(rank)
+        # Add reciprocal rank to the total
+        total_reciprocal_rank += reciprocal_rank
 
-    assert distances_lists.__len__() == ranks.__len__()
-    mrr = sum(1 / rank if rank != 0 else 0 for rank in ranks) / len(ranks)
+    # Calculate mean reciprocal rank
+    mrr = total_reciprocal_rank / len(distances_lists)
+
     return mrr
 
 
