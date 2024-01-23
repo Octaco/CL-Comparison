@@ -311,22 +311,15 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
 
 def calculate_mrr_from_distances(distances_lists):
-    total_reciprocal_rank = 0
+    ranks = []
+    for batch_idx, predictions in enumerate(distances_lists):
+        correct_score = predictions[0]
+        scores = np.array([prediction for prediction in predictions])
+        rank = np.sum(scores <= correct_score)
+        ranks.append(rank)
+    mean_mrr = np.mean(1.0 / np.array(ranks))
 
-    for distances in distances_lists:
-        # Sort distances and get the index of the first element in the sorted list
-        rank = sorted(range(len(distances)), key=lambda k: distances[k])[0]
-
-        # Calculate reciprocal rank
-        reciprocal_rank = 1 / (rank + 1)
-
-        # Add reciprocal rank to the total
-        total_reciprocal_rank += reciprocal_rank
-
-    # Calculate mean reciprocal rank
-    mrr = total_reciprocal_rank / len(distances_lists)
-
-    return mrr
+    return mean_mrr
 
 
 def write_mrr_to_file(args, mrr, test=False):

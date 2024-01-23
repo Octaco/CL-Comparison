@@ -28,8 +28,10 @@ class TestMRRCalculation(unittest.TestCase):
         mrr3 = calculate_mrr_from_distances(list2)
         mrra = calculate_mrr_from_distances(b)
 
-        # print(f"mmra : {mrra}")
-        assert mrra == 0.5
+        print(f"mmra : {mrra}")
+        print(f"mmr2 : {mrr2}")
+        print(f"mmr3 : {mrr3}")
+        assert mrra == 0.4666666666666666
 
         # print(mrr)
         assert mrr2 == 1.0
