@@ -179,7 +179,7 @@ def main(randomt=None):
     train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2)
 
     # prediction
-    distances = evaluation(args,model, test_params, validation_set, validation_set2)
+    distances = evaluation(args, model, test_params, validation_set, validation_set2)
 
     # evaluation
     mrr = calculate_mrr_from_distances(distances)
@@ -188,7 +188,84 @@ def main(randomt=None):
     write_mrr_to_file(args, mrr)
 
 
-def evaluation(args,model, test_params, validation_set, validation_set2):
+def train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2):
+    logger.debug("***** Running training *****")
+    dataloader_train = DataLoader(training_set, **train_params)
+    dataloader_train2 = DataLoader(training_set2, **train_params)
+    for epoch in range(args.num_epochs):
+        logger.debug(f"Epoch {epoch} started")
+        dataloader_iterator = iter(dataloader_train)
+        data2 = next(dataloader_iterator)
+        summed_loss = []
+
+        for index, data1 in enumerate(dataloader_train2):
+            try:
+                # print(f"Epoch {epoch} batch {index} started")
+
+                id_1 = data1["ids"].to(args.device)
+                id_2 = data2["ids"].to(args.device)
+
+                mask_1 = data1["mask"].to(args.device)
+                mask_2 = data2["mask"].to(args.device)
+                # logger.debug(f"Epoch {epoch} batch {index} started")
+
+                query = model(id_1, mask_1)[1]  # using pooled values
+                # query = query.unsqueeze(0)
+                positive_key = model(id_2, mask_2)[1]  # using pooled values
+                # positive_key = positive_key.unsqueeze(0)
+
+                # negative keys
+                sample_indices = list(range(len(dataloader_train2)))
+                sample_indices.remove(index)
+                sample_idx = random.choices(sample_indices, k=7)
+                # sample_indices.append(index)
+
+                subset = torch.utils.data.Subset(training_set2, sample_idx)
+                dataloader_subset = DataLoader(subset, **train_params)
+
+                negative_keys = []
+                for index2, data in enumerate(dataloader_subset):
+                    id_3 = data["ids"].to(args.device)
+                    mask_3 = data["mask"].to(args.device)
+                    negative_key = model(id_3, mask_3)[1]
+                    negative_keys.append(negative_key.clone().detach())
+
+                negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+
+                if args.loss_formulation == 'INFO_NCE':
+                    loss = loss_formulation(query, positive_key, negative_keys_reshaped)
+                elif args.loss_formulation == 'Soft_nearest_neighbour':
+                    # https: // gitlab.com / afagarap / pt - snnl
+                    loss = loss_formulation(query, positive_key, negative_keys_reshaped)
+                elif args.loss_formulation == 'triplet':
+                    loss = loss_formulation(query, positive_key, negative_keys_reshaped)
+                else:
+                    raise ValueError("Loss formulation selected is not valid. Please select one of the following: " +
+                                     ", ".join(LOSS_FORMULATIONS))
+                # logger.debug(f"Epoch {epoch} batch {index} finished, loss: {loss}")
+                summed_loss.append(loss)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                data2 = next(dataloader_iterator)
+
+            except StopIteration:
+                dataloader_iterator = iter(dataloader_train)
+                data2 = next(dataloader_iterator)
+
+        averaged_loss = sum(summed_loss) / len(summed_loss)
+        logger.debug(f"Epoch {epoch} finished, loss: {averaged_loss}")
+
+    logger.debug("***** Finished training *****")
+
+    # querry, seperatly positve and negative and compare to querry.
+    # -> 100 numbers each similarity between querry and positive / negative
+    # training on training data, predition of cosine similarity  on test data.
+    # MRR on similarity numers.
+
+
+def evaluation(args, model, test_params, validation_set, validation_set2):
     logger.debug("***** Running evaluation *****")
 
     dataloader_eval = DataLoader(validation_set, **test_params)
@@ -241,73 +318,6 @@ def evaluation(args,model, test_params, validation_set, validation_set2):
             dataloader_iterator = iter(dataloader_eval)
             data2 = next(dataloader_iterator)
     return all_distances
-
-
-def train(args, loss_formulation, model, optimizer, train_params, training_set, training_set2):
-    logger.debug("***** Running training *****")
-    dataloader_train = DataLoader(training_set, **train_params)
-    dataloader_train2 = DataLoader(training_set2, **train_params)
-    for epoch in range(args.num_epochs):
-        logger.debug(f"Epoch {epoch} started")
-        dataloader_iterator = iter(dataloader_train)
-        data2 = next(dataloader_iterator)
-        summed_loss = []
-
-        for index, data1 in enumerate(dataloader_train2):
-            try:
-
-                id_1 = data1["ids"].to(args.device)
-                id_2 = data2["ids"].to(args.device)
-
-                mask_1 = data1["mask"].to(args.device)
-                mask_2 = data2["mask"].to(args.device)
-                # logger.debug(f"Epoch {epoch} batch {index} started")
-
-                query = model(id_1, mask_1)[1]  # using pooled values
-                # query = query.unsqueeze(0)
-                positive_key = model(id_2, mask_2)[1]  # using pooled values
-                # positive_key = positive_key.unsqueeze(0)
-
-                # negative keys
-                sample_indices = list(range(len(dataloader_train2)))
-                sample_indices.remove(index)
-                sample_idx = random.choices(sample_indices, k=7)
-                # sample_indices.append(index)
-
-                subset = torch.utils.data.Subset(training_set2, sample_idx)
-                dataloader_subset = DataLoader(subset, **train_params)
-
-                negative_keys = []
-                for index2, data in enumerate(dataloader_subset):
-                    id_3 = data["ids"].to(args.device)
-                    mask_3 = data["mask"].to(args.device)
-                    negative_key = model(id_3, mask_3)[1]
-                    negative_keys.append(negative_key.clone().detach())
-
-                negative_keys_reshaped = torch.cat(negative_keys, dim=0)
-
-                loss = loss_formulation(query, positive_key, negative_keys_reshaped)
-                # logger.debug(f"Epoch {epoch} batch {index} finished, loss: {loss}")
-                summed_loss.append(loss)
-
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                data2 = next(dataloader_iterator)
-
-            except StopIteration:
-                dataloader_iterator = iter(dataloader_train)
-                data2 = next(dataloader_iterator)
-
-        averaged_loss = sum(summed_loss) / len(summed_loss)
-        logger.debug(f"Epoch {epoch} finished, loss: {averaged_loss}")
-
-    logger.debug("***** Finished training *****")
-
-            # querry, seperatly positve and negative and compare to querry.
-            # -> 100 numbers each similarity between querry and positive / negative
-            # training on training data, predition of cosine similarity  on test data.
-            # MRR on similarity numers.
 
 
 def calculate_mrr_from_distances(distances_lists):
