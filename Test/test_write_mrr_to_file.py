@@ -18,7 +18,7 @@ args.language = 'ruby, python'
 class MyTestCase(unittest.TestCase):
     def test_something(self):
 
-        mrr = [np.random.rand(1)[0] for _ in range(10)]
+        mrr = np.random.rand(1)[0]
 
         write_mrr_to_file(args, mrr, True)
 
