@@ -109,8 +109,8 @@ def main(randomt=None):
                         format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.DEBUG)
-    logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s",
-                   args.local_rank, device, args.n_gpu, bool(args.local_rank != -1))
+    logger.warning("Process rank: %s, device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
+                   args.local_rank, device, args.n_gpu, args.language, args.loss_formulation)
 
     # Set seed
     set_seed(args)
