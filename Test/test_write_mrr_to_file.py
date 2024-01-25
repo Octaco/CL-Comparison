@@ -12,7 +12,8 @@ sys.path.append(os.path.abspath(os.path.join('..', 'data/MRR.txt')))
 
 parser = argparse.ArgumentParser()
 args = parser.parse_args()
-args.language = 'ruby, python'
+args.language = 'ruby'
+args.loss_formulation = "INFO_NCE"
 
 
 class MyTestCase(unittest.TestCase):
