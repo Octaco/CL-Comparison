@@ -148,12 +148,12 @@ def main(randomt=None):
     # print(testing_set.__getitem__(0))
 
     train_params = {'batch_size': args.TRAIN_BATCH_SIZE,
-                    'shuffle': True,
+                    'shuffle': False,
                     'num_workers': 0
                     }
 
     test_params = {'batch_size': args.TEST_BATCH_SIZE,
-                   'shuffle': True,
+                   'shuffle': False,
                    'num_workers': 0
                    }
 
