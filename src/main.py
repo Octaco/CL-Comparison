@@ -51,13 +51,13 @@ def load_data(args):
     train_df1['text'] = function_documentation
 
     test_df1 = pd.DataFrame()
-    test_df1['text'] = function_documentation
+    test_df1['text'] = function_documentation_test
 
     train_df2 = pd.DataFrame()
-    train_df2['text'] = function_code
+    train_df2['code'] = function_code
 
     test_df2 = pd.DataFrame()
-    test_df2['text'] = function_code
+    test_df2['code'] = function_code_test
 
     return train_df1, train_df2, test_df1, test_df2
 
