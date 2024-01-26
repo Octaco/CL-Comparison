@@ -80,7 +80,7 @@ def main(randomt=None):
     parser.add_argument("--local_rank", type=int, default=-2,
                         help="For distributed training: local_rank")
 
-    parser.add_argument("--log_path", default='../logging', type=str, required=False,
+    parser.add_argument("--log_path", default='./logging', type=str, required=False,
                         help="Path to log files")
 
     args = parser.parse_args()
