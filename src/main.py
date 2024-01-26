@@ -120,12 +120,12 @@ def main(randomt=None):
 
     # Create Custom Dataset
     train_size = args.train_size
-    train_dataset = train_df1.sample(frac=train_size, random_state=200)
+    train_dataset = train_df1.head(int(train_size * len(train_df1)))
     valid_dataset = train_df1.drop(train_dataset.index).reset_index(drop=True)
     train_dataset = train_dataset.reset_index(drop=True)
     test_dataset = test_df1.reset_index(drop=True)
 
-    train_dataset2 = train_df2.sample(frac=train_size, random_state=200)
+    train_dataset2 = train_df2.head(int(train_size * len(train_df2)))
     valid_dataset2 = train_df2.drop(train_dataset.index).reset_index(drop=True)
     train_dataset2 = train_dataset2.reset_index(drop=True)
     test_dataset2 = test_df2.reset_index(drop=True)
