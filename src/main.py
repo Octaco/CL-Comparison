@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 LOSS_FORMULATIONS = ['triplet', 'INFO_NCE', 'Soft_nearest_neighbour']
 LEARNING_ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
 
-mrr_path = '../data/MRR.txt'
+mrr_path = './data/MRR.txt'
 
 
 def set_seed(args):
@@ -184,6 +184,8 @@ def main(randomt=None):
     # evaluation
     mrr = calculate_mrr_from_distances(distances)
 
+    logger.warning(f"MRR: {mrr}")
+
     # write mrr to file
     write_mrr_to_file(args, mrr)
 
@@ -317,6 +319,8 @@ def evaluation(args, model, test_params, validation_set, validation_set2):
         except StopIteration:
             dataloader_iterator = iter(dataloader_eval)
             data2 = next(dataloader_iterator)
+
+    logger.debug("***** finished evaluation *****")
     return all_distances
 
 
