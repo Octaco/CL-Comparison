@@ -140,9 +140,6 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
 
         for idx, batch in enumerate(train_dataloader):
 
-            if idx > 24:
-                break
-
             if len(batch) <= 1:
                 continue
 
@@ -191,9 +188,6 @@ def evaluation(args, model, test_params, valid_set):
     eval_dataloader = DataLoader(valid_set, **test_params)
     all_distances = []
     for idx, batch in tqdm(enumerate(eval_dataloader)):
-
-        if idx > 20:
-            break
 
         if len(batch) <= 1:
             continue
