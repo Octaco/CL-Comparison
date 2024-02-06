@@ -274,7 +274,7 @@ def main():
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
 
-    parser.add_argument("--mrr_path", default='../data/MRR.txt', type=str, required=False, help="Path to mrr file")
+    parser.add_argument("--mrr_path", default='./data/MRR.txt', type=str, required=False, help="Path to mrr file")
 
     parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
