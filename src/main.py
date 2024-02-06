@@ -209,7 +209,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
 
                 mask_1 = data1["mask"].to(args.device)
                 mask_2 = data2["mask"].to(args.device)
-                # logger.debug(f"Epoch {epoch} batch {index} started")
+                # logging.debug(f"Epoch {epoch} batch {index} started")
 
                 query = model(id_1, mask_1)[1]  # using pooled values
                 # query = query.unsqueeze(0)
@@ -244,7 +244,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set, 
                 else:
                     raise ValueError("Loss formulation selected is not valid. Please select one of the following: " +
                                      ", ".join(LOSS_FORMULATIONS))
-                # logger.debug(f"Epoch {epoch} batch {index} finished, loss: {loss}")
+                # logging.debug(f"Epoch {epoch} batch {index} finished, loss: {loss}")
                 summed_loss.append(loss)
 
                 optimizer.zero_grad()
