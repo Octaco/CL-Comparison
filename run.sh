@@ -9,4 +9,4 @@ source venv/bin/activate
 lang=ruby #fine-tuning a language-specific model for each programming language
 idx=0 #test batch idx
 
-python src/run.py
+python src/main.py
