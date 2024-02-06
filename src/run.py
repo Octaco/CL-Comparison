@@ -143,6 +143,9 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
             if len(batch) <= 1:
                 continue
 
+            if idx > 25:
+                break
+
             # query = doc
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -191,6 +194,9 @@ def evaluation(args, model, test_params, valid_set):
 
         if len(batch) <= 1:
             continue
+
+        if idx > 25:
+            break
 
         # query = doc
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
