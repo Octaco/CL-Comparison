@@ -150,6 +150,10 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
             inputs = {'input_ids': query_id, 'attention_mask': query_mask}
             query = model(**inputs)[1]  # using pooled values
 
+            logging.debug(f"idx: {idx}")
+            logging.debug(f"code_ids_0: {batch['code_ids'][0].shape}")
+            logging.debug(f"code_ids_0: {batch['code_ids'][0].shape}")
+
             code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                           batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
                          range(1, batch_size)]
@@ -272,7 +276,7 @@ def main():
 
     parser.add_argument("--mrr_path", default='./data/MRR.txt', type=str, required=False, help="Path to mrr file")
 
-    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
+    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='DEBUG')
 
     parser.add_argument("--num_of_accumulation_steps", default=10, type=int, required=False,
                         help="Number of accumulation steps")
