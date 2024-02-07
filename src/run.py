@@ -140,12 +140,9 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
 
         for idx, batch in enumerate(train_dataloader):
 
-            for key in batch:
-                tensor = batch[key]
-                logging.debug(f"key: {key} {tensor.size(0)} train size: {args.train_batch_size}")
-                if tensor.size(0) < args.train_batch_size:
-                    logging.debug("continue")
-                    continue
+            if batch['code_ids'].size(0) < args.train_batch_size:
+                logging.debug("continue")
+                continue
 
             # query = doc
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
