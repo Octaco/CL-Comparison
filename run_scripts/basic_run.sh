@@ -3,7 +3,7 @@
 
 GPU=$1
 
-python3 ../run.py \
+python3 ./run.py \
     --loss_function INFO_NCE \
     --log_path ../logging \
     --lang ruby \
