@@ -260,7 +260,7 @@ def main():
     parser.add_argument("--local_rank", type=int, default=-2,
                         help="For distributed training: local_rank")
 
-    parser.add_argument("--log_path", default='./logging', type=str, required=False,
+    parser.add_argument("--log_path", default='../logging', type=str, required=False,
                         help="Path to log files")
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
@@ -278,12 +278,14 @@ def main():
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
 
-    parser.add_argument("--mrr_path", default='./data/MRR.txt', type=str, required=False, help="Path to mrr file")
+    parser.add_argument("--mrr_path", default='../data/MRR.txt', type=str, required=False, help="Path to mrr file")
 
     parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
     parser.add_argument("--num_of_accumulation_steps", default=10, type=int, required=False,
                         help="Number of accumulation steps")
+
+    parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
 
     args = parser.parse_args()
     args.dataset = 'codebert-base'
@@ -291,9 +293,12 @@ def main():
     args.MAX_LEN = 512
 
     # Setup CUDA, GPU
+    if args.GPU:
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
-
     args.device = device
 
     # Setup logging
@@ -301,8 +306,8 @@ def main():
                         format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=args.log_level)
-    logging.warning("Process rank: %s, device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
-                    args.local_rank, device, args.n_gpu, args.lang, args.loss_function)
+    logging.info("Process rank: %s, device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
+                 args.local_rank, device, args.n_gpu, args.lang, args.loss_function)
 
     print("loglevel: ", args.log_level)
 
