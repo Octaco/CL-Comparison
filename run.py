@@ -197,10 +197,9 @@ def evaluation(args, model, test_params, valid_set):
     all_distances = []
     for idx, batch in tqdm(enumerate(eval_dataloader)):
 
-        for key in batch:
-            tensor = batch[key]
-            if tensor.size(0) <= args.train_batch_size + 1:
-                continue
+        if batch['code_ids'].size(0) < args.train_batch_size:
+            logging.debug("continue")
+            continue
 
         # query = doc
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
