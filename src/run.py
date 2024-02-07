@@ -140,8 +140,9 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
 
         for idx, batch in enumerate(train_dataloader):
 
-            if len(batch) <= 1:
-                continue
+            for key in batch:
+                if len(batch[key]) <= 1:
+                    continue
 
             # query = doc
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -189,8 +190,9 @@ def evaluation(args, model, test_params, valid_set):
     all_distances = []
     for idx, batch in tqdm(enumerate(eval_dataloader)):
 
-        if len(batch) <= 1:
-            continue
+        for key in batch:
+            if len(batch[key]) <= 1:
+                continue
 
         # query = doc
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
