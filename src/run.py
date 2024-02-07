@@ -135,14 +135,16 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
 
         all_losses = []
 
-        batch_size = train_params['batch_size']
+        batch_size = args.train_batch_size
         train_dataloader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
 
         for idx, batch in enumerate(train_dataloader):
 
             for key in batch:
                 tensor = batch[key]
-                if tensor.size(0) <= args.train_batch_size + 1:
+                logging.debug(f"key: {key} {tensor.size(0)} train size: {args.train_batch_size}")
+                if tensor.size(0) < args.train_batch_size:
+                    logging.debug("continue")
                     continue
 
             # query = doc
