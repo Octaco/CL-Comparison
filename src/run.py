@@ -154,8 +154,8 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
             logging.debug(f"code_ids: {batch['code_ids'].shape}")
             logging.debug(f"code_ids_0: {batch['code_ids'][0].shape}")
 
-            logging.debug(f"mask: {batch['attention_mask'].shape}")
-            logging.debug(f"mask_0: {batch['attention_mask'][0].shape}")
+            logging.debug(f"mask: {batch['code_mask'].shape}")
+            logging.debug(f"mask_0: {batch['code_mask'][0].shape}")
 
             code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                           batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
