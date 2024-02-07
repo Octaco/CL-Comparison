@@ -11,6 +11,7 @@ from transformers import RobertaModel, RobertaTokenizer
 from datasets import load_dataset
 
 from datetime import datetime
+import time
 from tqdm import tqdm
 
 LOSS_FUNCTIONS = ['triplet', 'INFO_NCE', 'Soft_nearest_neighbour']
@@ -242,6 +243,7 @@ def evaluation(args, model, test_params, valid_set):
 
 
 def main():
+    start_time = time.time()
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--loss_function", default="INFO_NCE", type=str, required=False,
@@ -365,6 +367,17 @@ def main():
 
     # write mrr to file
     write_mrr_to_file(args, mrr)
+    end_time = time.time()
+
+    # Calculate runtime duration in seconds
+    runtime_seconds = end_time - start_time
+
+    # Convert runtime duration to hours, minutes, and seconds
+    hours, remainder = divmod(runtime_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    # Print or log the runtime
+    logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
 
 if __name__ == '__main__':
