@@ -280,7 +280,7 @@ def main():
 
     parser.add_argument("--mrr_path", default='./data/MRR.txt', type=str, required=False, help="Path to mrr file")
 
-    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='DEBUG')
+    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
     parser.add_argument("--num_of_accumulation_steps", default=10, type=int, required=False,
                         help="Number of accumulation steps")
