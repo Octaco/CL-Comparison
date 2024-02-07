@@ -141,7 +141,7 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
         for idx, batch in enumerate(train_dataloader):
 
             for key in batch:
-                if len(batch[key]) <= 1:
+                if len(batch[key]) <= args.train_batch_size:
                     continue
 
             # query = doc
@@ -191,7 +191,7 @@ def evaluation(args, model, test_params, valid_set):
     for idx, batch in tqdm(enumerate(eval_dataloader)):
 
         for key in batch:
-            if len(batch[key]) <= 1:
+            if len(batch[key]) <= args.eval_batch_size:
                 continue
 
         # query = doc
