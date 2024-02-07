@@ -127,7 +127,7 @@ def write_mrr_to_file(args, mrr, test=False):
         file.write(mrr_new)
 
 
-def train(args, loss_formulation, model, optimizer, train_params, training_set):
+def train(args, loss_formulation, model, optimizer, training_set):
     logging.info("Start training ...")
     print("Start training ...")
     for epoch in tqdm(range(1, args.num_train_epochs + 1)):
@@ -332,6 +332,7 @@ def main():
     logging.debug("TEST Dataset: %s", test_dataset.shape)
 
     training_set = CustomDataset(train_dataset, args)
+    test_set = CustomDataset(test_dataset, args)
     valid_set = CustomDataset(valid_dataset, args)
 
     # model
@@ -350,9 +351,9 @@ def main():
         raise ValueError("Loss formulation selected is not valid. Please select one of the following: " +
                          ", ".join(LOSS_FUNCTIONS))
 
-    train(args, loss_formulation, model, optimizer, train_params, training_set)
+    train(args, loss_formulation, model, optimizer, training_set)
 
-    distances = evaluation(args, model, test_params, valid_set)
+    distances = evaluation(args, model, test_params, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
 
