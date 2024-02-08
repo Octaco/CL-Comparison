@@ -380,7 +380,7 @@ def main():
     minutes, seconds = divmod(remainder, 60)
 
     # Print or log the runtime
-    logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
+    print(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
 
 if __name__ == '__main__':
