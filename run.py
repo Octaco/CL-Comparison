@@ -14,7 +14,7 @@ from datetime import datetime
 import time
 from tqdm import tqdm
 
-LOSS_FUNCTIONS = ['triplet', 'INFO_NCE', 'Soft_nearest_neighbour']
+LOSS_FUNCTIONS = ['triplet', 'INFO_NCE', 'soft_nearest_neighbour']
 LEARNING_ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
 
 
