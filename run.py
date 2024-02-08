@@ -211,10 +211,13 @@ def train(args, model, optimizer, training_set):
     logging.info("Training finished")
 
 
-def evaluation(args, model, test_params, valid_set):
+def evaluation(args, model, valid_set):
     logging.info("Evaluate ...")
     print("Evaluate ...")
-    eval_dataloader = DataLoader(valid_set, **test_params)
+
+    batch_size = args.eval_batch_size
+    eval_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
+
     all_distances = []
     for idx, batch in tqdm(enumerate(eval_dataloader)):
 
@@ -341,16 +344,6 @@ def main():
     # set up data data
     train_df, test_df = load_data(args)
 
-    train_params = {'batch_size': args.train_batch_size,
-                    'shuffle': True,
-                    'num_workers': 0
-                    }
-
-    test_params = {'batch_size': args.eval_batch_size,
-                   'shuffle': True,
-                   'num_workers': 0
-                   }
-
     train_dataset = train_df.sample(frac=args.train_size, random_state=200)
     valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
     train_dataset = train_dataset.reset_index(drop=True)
@@ -373,7 +366,7 @@ def main():
     train(args, model, optimizer, training_set)
 
     # evaluate
-    distances = evaluation(args, model, test_params, test_set)
+    distances = evaluation(args, model, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
