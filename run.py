@@ -266,7 +266,7 @@ def main():
     start_time = time.time()
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--loss_function", default="INFO_NCE", type=str, required=False,
+    parser.add_argument("--loss_function", default="triplet", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
     parser.add_argument("--learning_architecture", default=None, type=str, required=False,
@@ -376,14 +376,13 @@ def main():
     distances = evaluation(args, model, test_params, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
-
     logging.info(f"MRR: {mrr}")
 
     # write mrr to file
     write_mrr_to_file(args, mrr)
-    end_time = time.time()
 
     # Calculate runtime duration in seconds
+    end_time = time.time()
     runtime_seconds = end_time - start_time
 
     # Convert runtime duration to hours, minutes, and seconds
