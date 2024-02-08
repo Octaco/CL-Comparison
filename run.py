@@ -72,7 +72,7 @@ def info_nce_loss(query, positive_key, negative_keys):
 
 
 def triplet_loss(query, positive_key, negative_keys):
-    return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_keys[0])
+    return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_keys)
 
 
 def soft_nearest_neighbour_loss(query, positive_key, negative_keys):
@@ -192,7 +192,8 @@ def train(args, model, optimizer, training_set):
             if args.loss_function == 'INFO_NCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
-                loss = triplet_loss(query, positive_code_key, negative_keys_reshaped)
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                loss = triplet_loss(query, positive_code_key, negative_key)
             else:
                 loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
 
