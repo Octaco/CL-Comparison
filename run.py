@@ -266,9 +266,9 @@ def main():
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
 
-    parser.add_argument("--train_batch_size", default=7, type=int, required=False, help="Training batch size")
+    parser.add_argument("--train_batch_size", default=10, type=int, required=False, help="Training batch size")
 
-    parser.add_argument("--eval_batch_size", default=7, type=int, required=False, help="Evaluation batch size")
+    parser.add_argument("--eval_batch_size", default=10, type=int, required=False, help="Evaluation batch size")
 
     parser.add_argument("--learning_rate", default=1e-5, type=float, required=False, help="Learning rate")
 
