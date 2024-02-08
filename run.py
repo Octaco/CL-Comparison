@@ -67,6 +67,18 @@ class CustomDataset(TensorDataset):
         }
 
 
+def info_nce_loss(query, positive_key, negative_keys):
+    return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
+
+
+def triplet_loss(query, positive_key, negative_keys):
+    return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_keys[0])
+
+
+def soft_nearest_neighbour_loss(query, positive_key, negative_keys):
+    return torch.nn.SoftMarginLoss()(query, positive_key, negative_keys[0])
+
+
 def load_data(args):
     code_search_dataset = load_dataset('code_search_net', args.lang)
 
@@ -128,7 +140,7 @@ def write_mrr_to_file(args, mrr, test=False):
         file.write(mrr_new)
 
 
-def train(args, loss_formulation, model, optimizer, training_set):
+def train(args, model, optimizer, training_set):
     logging.info("Start training ...")
     print("Start training ...")
     for epoch in tqdm(range(1, args.num_train_epochs + 1)):
@@ -174,9 +186,16 @@ def train(args, loss_formulation, model, optimizer, training_set):
                 negative_key = model(**inputs)[1]  # using pooled values
                 negative_keys.append(negative_key.clone().detach())
 
-            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
+            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
+                                               dim=0)
 
-            loss = loss_formulation(query, positive_code_key, negative_keys_reshaped)
+            if args.loss_function == 'INFO_NCE':
+                loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
+            elif args.loss_function == 'triplet':
+                loss = triplet_loss(query, positive_code_key, negative_keys_reshaped)
+            else:
+                loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
+
             loss.backward()
 
             all_losses.append(loss.to("cpu").detach().numpy())
@@ -345,23 +364,14 @@ def main():
     valid_set = CustomDataset(valid_dataset, args)
 
     # model
-
     model = RobertaModel.from_pretrained('microsoft/codebert-base')
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
     model.to(torch.device(args.device))
 
-    if args.loss_function == 'triplet':
-        loss_formulation = torch.nn.TripletMarginLoss(margin=1.0, p=2)
-    elif args.loss_function == 'INFO_NCE':
-        loss_formulation = InfoNCE(negative_mode='unpaired')
-    elif args.loss_function == 'Soft_nearest_neighbour':
-        loss_formulation = torch.nn.SoftMarginLoss()
-    else:
-        raise ValueError("Loss formulation selected is not valid. Please select one of the following: " +
-                         ", ".join(LOSS_FUNCTIONS))
+    # train
+    train(args, model, optimizer, training_set)
 
-    train(args, loss_formulation, model, optimizer, training_set)
-
+    # evaluate
     distances = evaluation(args, model, test_params, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
