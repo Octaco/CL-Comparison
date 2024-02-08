@@ -174,7 +174,7 @@ def train(args, loss_formulation, model, optimizer, training_set):
                 negative_key = model(**inputs)[1]  # using pooled values
                 negative_keys.append(negative_key.clone().detach())
 
-            negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
 
             loss = loss_formulation(query, positive_code_key, negative_keys_reshaped)
             loss.backward()
@@ -224,7 +224,7 @@ def evaluation(args, model, test_params, valid_set):
             negative_key = model(**inputs)[1]  # using pooled values
             negative_keys.append(negative_key.clone().detach())
 
-        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+        negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
 
         # calc Euclidean distance for positive key at first position
         distances = [np.linalg.norm((query - positive_code_key).detach().cpu().numpy())]
@@ -285,6 +285,9 @@ def main():
 
     parser.add_argument("--num_of_accumulation_steps", default=10, type=int, required=False,
                         help="Number of accumulation steps")
+
+    parser.add_argument("--num_of_negative_samples", default=6, type=int, required=False, help="Number of negative "
+                                                                                               "samples")
 
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
 
