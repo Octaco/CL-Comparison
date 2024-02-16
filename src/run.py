@@ -39,7 +39,7 @@ class CustomDataset(TensorDataset):
             doc,
             add_special_tokens=False,
             max_length=self.max_len,
-            truncation=True,
+            truncation='longest_first',
             padding='max_length',
             return_token_type_ids=False
         )
@@ -50,7 +50,7 @@ class CustomDataset(TensorDataset):
             code,
             add_special_tokens=False,
             max_length=self.max_len,
-            truncation=True,
+            truncation='longest_first',
             padding='max_length',
             return_token_type_ids=False
         )
@@ -181,9 +181,9 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
             all_losses.append(loss.to("cpu").detach().numpy())
 
             if (idx + 1) % args.num_of_accumulation_steps == 0:
-                optimizer.zero_grad()
                 optimizer.step()
-            logging.debug(f"train_loss epoch {epoch}: {loss}")
+                optimizer.zero_grad()
+            logging.debug(f"train_los s epoch {epoch}: {loss}")
 
         train_mean_loss = np.mean(all_losses)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
@@ -259,7 +259,7 @@ def main():
     parser.add_argument("--local_rank", type=int, default=-2,
                         help="For distributed training: local_rank")
 
-    parser.add_argument("--log_path", default='./logging', type=str, required=False,
+    parser.add_argument("--log_path", default='../logging', type=str, required=False,
                         help="Path to log files")
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
@@ -272,8 +272,6 @@ def main():
 
     parser.add_argument("--num_train_epochs", default=5, type=int, required=False, help="Number of training epochs")
 
-    parser.add_argument("--n_labels", default=20, type=int, required=False, help="Number of labels")
-
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
 
@@ -281,7 +279,7 @@ def main():
 
     parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='DEBUG')
 
-    parser.add_argument("--num_of_accumulation_steps", default=10, type=int, required=False,
+    parser.add_argument("--num_of_accumulation_steps", default=16, type=int, required=False,
                         help="Number of accumulation steps")
 
     args = parser.parse_args()
