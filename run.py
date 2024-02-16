@@ -11,9 +11,10 @@ from transformers import RobertaModel, RobertaTokenizer
 from datasets import load_dataset
 
 from datetime import datetime
+import time
 from tqdm import tqdm
 
-LOSS_FUNCTIONS = ['triplet', 'INFO_NCE', 'Soft_nearest_neighbour']
+LOSS_FUNCTIONS = ['triplet', 'INFO_NCE', 'soft_nearest_neighbour']
 LEARNING_ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
 
 
@@ -64,6 +65,18 @@ class CustomDataset(TensorDataset):
             'code_ids': torch.tensor(code_ids, dtype=torch.long),
             'code_mask': torch.tensor(code_mask, dtype=torch.long),
         }
+
+
+def info_nce_loss(query, positive_key, negative_keys):
+    return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
+
+
+def triplet_loss(query, positive_key, negative_keys):
+    return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_keys)
+
+
+def soft_nearest_neighbour_loss(query, positive_key, negative_keys):
+    return torch.nn.SoftMarginLoss()(query, positive_key, negative_keys[0])
 
 
 def load_data(args):
@@ -127,7 +140,7 @@ def write_mrr_to_file(args, mrr, test=False):
         file.write(mrr_new)
 
 
-def train(args, loss_formulation, model, optimizer, train_params, training_set):
+def train(args, model, optimizer, training_set):
     logging.info("Start training ...")
     print("Start training ...")
     for epoch in tqdm(range(1, args.num_train_epochs + 1)):
@@ -135,14 +148,14 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
 
         all_losses = []
 
-        batch_size = train_params['batch_size']
+        batch_size = args.train_batch_size
         train_dataloader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
 
         for idx, batch in enumerate(train_dataloader):
 
-            for key in batch:
-                if batch[key].size(0) <= args.train_batch_size:
-                    continue
+            if batch['code_ids'].size(0) < args.train_batch_size:
+                logging.debug("continue")
+                continue
 
             # query = doc
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -173,9 +186,17 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
                 negative_key = model(**inputs)[1]  # using pooled values
                 negative_keys.append(negative_key.clone().detach())
 
-            negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
+                                               dim=0)
 
-            loss = loss_formulation(query, positive_code_key, negative_keys_reshaped)
+            if args.loss_function == 'INFO_NCE':
+                loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
+            elif args.loss_function == 'triplet':
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                loss = triplet_loss(query, positive_code_key, negative_key)
+            else:
+                loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
+
             loss.backward()
 
             all_losses.append(loss.to("cpu").detach().numpy())
@@ -190,16 +211,19 @@ def train(args, loss_formulation, model, optimizer, train_params, training_set):
     logging.info("Training finished")
 
 
-def evaluation(args, model, test_params, valid_set):
+def evaluation(args, model, valid_set):
     logging.info("Evaluate ...")
     print("Evaluate ...")
-    eval_dataloader = DataLoader(valid_set, **test_params)
+
+    batch_size = args.eval_batch_size
+    eval_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
+
     all_distances = []
     for idx, batch in tqdm(enumerate(eval_dataloader)):
 
-        for key in batch:
-            if batch[key].size(0) <= args.train_batch_size:
-                continue
+        if batch['code_ids'].size(0) < args.train_batch_size:
+            logging.debug("continue")
+            continue
 
         # query = doc
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -223,7 +247,7 @@ def evaluation(args, model, test_params, valid_set):
             negative_key = model(**inputs)[1]  # using pooled values
             negative_keys.append(negative_key.clone().detach())
 
-        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+        negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
 
         # calc Euclidean distance for positive key at first position
         distances = [np.linalg.norm((query - positive_code_key).detach().cpu().numpy())]
@@ -242,9 +266,10 @@ def evaluation(args, model, test_params, valid_set):
 
 
 def main():
+    start_time = time.time()
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--loss_function", default="INFO_NCE", type=str, required=False,
+    parser.add_argument("--loss_function", default="triplet", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
     parser.add_argument("--learning_architecture", default=None, type=str, required=False,
@@ -264,9 +289,9 @@ def main():
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
 
-    parser.add_argument("--train_batch_size", default=7, type=int, required=False, help="Training batch size")
+    parser.add_argument("--train_batch_size", default=10, type=int, required=False, help="Training batch size")
 
-    parser.add_argument("--eval_batch_size", default=7, type=int, required=False, help="Evaluation batch size")
+    parser.add_argument("--eval_batch_size", default=10, type=int, required=False, help="Evaluation batch size")
 
     parser.add_argument("--learning_rate", default=1e-5, type=float, required=False, help="Learning rate")
 
@@ -277,10 +302,15 @@ def main():
 
     parser.add_argument("--mrr_path", default='./data/MRR.txt', type=str, required=False, help="Path to mrr file")
 
-    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='DEBUG')
+    parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
     parser.add_argument("--num_of_accumulation_steps", default=16, type=int, required=False,
                         help="Number of accumulation steps")
+
+    parser.add_argument("--num_of_negative_samples", default=6, type=int, required=False, help="Number of negative "
+                                                                                               "samples")
+
+    parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
 
     args = parser.parse_args()
     args.dataset = 'codebert-base'
@@ -288,9 +318,12 @@ def main():
     args.MAX_LEN = 512
 
     # Setup CUDA, GPU
+    if args.GPU:
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
-
     args.device = device
 
     # Setup logging
@@ -298,8 +331,8 @@ def main():
                         format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=args.log_level)
-    logging.warning("Process rank: %s, device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
-                    args.local_rank, device, args.n_gpu, args.lang, args.loss_function)
+    logging.info("Process rank: %s, device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
+                 args.local_rank, device, args.n_gpu, args.lang, args.loss_function)
 
     print("loglevel: ", args.log_level)
 
@@ -308,16 +341,6 @@ def main():
 
     # set up data data
     train_df, test_df = load_data(args)
-
-    train_params = {'batch_size': args.train_batch_size,
-                    'shuffle': True,
-                    'num_workers': 0
-                    }
-
-    test_params = {'batch_size': args.eval_batch_size,
-                   'shuffle': True,
-                   'num_workers': 0
-                   }
 
     train_dataset = train_df.sample(frac=args.train_size, random_state=200)
     valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
@@ -329,34 +352,36 @@ def main():
     logging.debug("TEST Dataset: %s", test_dataset.shape)
 
     training_set = CustomDataset(train_dataset, args)
+    test_set = CustomDataset(test_dataset, args)
     valid_set = CustomDataset(valid_dataset, args)
 
     # model
-
     model = RobertaModel.from_pretrained('microsoft/codebert-base')
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
     model.to(torch.device(args.device))
 
-    if args.loss_function == 'triplet':
-        loss_formulation = torch.nn.TripletMarginLoss(margin=1.0, p=2)
-    elif args.loss_function == 'INFO_NCE':
-        loss_formulation = InfoNCE(negative_mode='unpaired')
-    elif args.loss_function == 'Soft_nearest_neighbour':
-        loss_formulation = torch.nn.SoftMarginLoss()
-    else:
-        raise ValueError("Loss formulation selected is not valid. Please select one of the following: " +
-                         ", ".join(LOSS_FUNCTIONS))
+    # train
+    train(args, model, optimizer, training_set)
 
-    train(args, loss_formulation, model, optimizer, train_params, training_set)
-
-    distances = evaluation(args, model, test_params, valid_set)
+    # evaluate
+    distances = evaluation(args, model, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
-
     logging.info(f"MRR: {mrr}")
 
     # write mrr to file
     write_mrr_to_file(args, mrr)
+
+    # Calculate runtime duration in seconds
+    end_time = time.time()
+    runtime_seconds = end_time - start_time
+
+    # Convert runtime duration to hours, minutes, and seconds
+    hours, remainder = divmod(runtime_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    # Print or log the runtime
+    print(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
 
 if __name__ == '__main__':
