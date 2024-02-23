@@ -68,6 +68,9 @@ class CustomDataset(TensorDataset):
 
 
 def info_nce_loss(query, positive_key, negative_keys):
+    # query = torch.flatten(query).view(-1).unsqueeze(0)
+    # positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
+    # negative_keys = torch.stack([torch.flatten(code_emb).view(-1) for code_emb in negative_keys])
     return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
 
 
@@ -146,22 +149,25 @@ def train(args, model, optimizer, training_set):
     for epoch in tqdm(range(1, args.num_train_epochs + 1)):
         logging.info("training epoch %d", epoch)
 
+        # random.shuffle(training_set)
+        train_dataloader = DataLoader(training_set, batch_size=args.train_batch_size, shuffle=True)
+
         all_losses = []
 
-        batch_size = args.train_batch_size
-        train_dataloader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
-
-        for idx, batch in enumerate(train_dataloader):
+        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch}", position=0, leave=True)
+        for idx, batch in enumerate(progress_bar):
 
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
                 continue
 
             # query = doc
-            query_id = batch['doc_ids'][0].unsqueeze(0).to(torch.device(args.device))
-            query_mask = batch['doc_mask'][0].unsqueeze(0).to(torch.device(args.device))
+            query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': query_id, 'attention_mask': query_mask}
             query = model(**inputs)[1]  # using pooled values
+            # query = model(**inputs)[0]  # using un-pooled values
+            # print("query shape: ", query.shape)
 
             logging.debug(f"idx: {idx}")
             logging.debug(f"code_ids: {batch['code_ids'].shape}")
@@ -172,11 +178,14 @@ def train(args, model, optimizer, training_set):
 
             code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                           batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
-                         range(0, batch_size)]
+                         range(0, args.train_batch_size)]
+
+            # print("cl len: ",len(code_list))
 
             positive_code_key = code_list.pop(0)
             inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
             positive_code_key = model(**inputs)[1]  # using pooled values
+            # positive_code_key = model(**inputs)[0]  # using un-pooled values
 
             negative_keys = []
 
@@ -184,6 +193,7 @@ def train(args, model, optimizer, training_set):
                 inputs = {'input_ids': code, 'attention_mask': mask}
 
                 negative_key = model(**inputs)[1]  # using pooled values
+                # negative_key = model(**inputs)[0]  # using un-pooled values
                 negative_keys.append(negative_key.clone().detach())
 
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
@@ -197,17 +207,21 @@ def train(args, model, optimizer, training_set):
             else:
                 loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
 
+            # print(loss)
             loss.backward()
 
             all_losses.append(loss.to("cpu").detach().numpy())
 
             if (idx + 1) % args.num_of_accumulation_steps == 0:
+                # print("model updated")
                 optimizer.step()
                 optimizer.zero_grad()
             logging.debug(f"train_los s epoch {epoch}: {loss}")
 
         train_mean_loss = np.mean(all_losses)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
+
+        del train_dataloader
     logging.info("Training finished")
 
 
@@ -226,10 +240,11 @@ def evaluation(args, model, valid_set):
             continue
 
         # query = doc
-        query_id = batch['doc_ids'][0].unsqueeze(0).to(torch.device(args.device))
-        query_mask = batch['doc_mask'][0].unsqueeze(0).to(torch.device(args.device))
+        query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+        query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': query_id, 'attention_mask': query_mask}
         query = model(**inputs)[1]  # using pooled values
+        # query = model(**inputs)[0]  # using un-pooled values
 
         batch_size = args.eval_batch_size
         code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
@@ -238,6 +253,7 @@ def evaluation(args, model, valid_set):
         positive_code_key = code_list.pop(0)
         inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
         positive_code_key = model(**inputs)[1]  # using pooled values
+        # positive_code_key = model(**inputs)[0]  # using un-pooled values
 
         negative_keys = []
 
@@ -245,6 +261,7 @@ def evaluation(args, model, valid_set):
             inputs = {'input_ids': code, 'attention_mask': mask}
 
             negative_key = model(**inputs)[1]  # using pooled values
+            # negative_key = model(**inputs)[0]  # using un-pooled values
             negative_keys.append(negative_key.clone().detach())
 
         negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
@@ -269,7 +286,7 @@ def main():
     start_time = time.time()
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--loss_function", default="triplet", type=str, required=False,
+    parser.add_argument("--loss_function", default="INFO_NCE", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
     parser.add_argument("--learning_architecture", default=None, type=str, required=False,
@@ -281,17 +298,14 @@ def main():
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
 
-    parser.add_argument("--local_rank", type=int, default=-2,
-                        help="For distributed training: local_rank")
-
     parser.add_argument("--log_path", default='../logging', type=str, required=False,
                         help="Path to log files")
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
 
-    parser.add_argument("--train_batch_size", default=10, type=int, required=False, help="Training batch size")
+    parser.add_argument("--train_batch_size", default=16, type=int, required=False, help="Training batch size")
 
-    parser.add_argument("--eval_batch_size", default=10, type=int, required=False, help="Evaluation batch size")
+    parser.add_argument("--eval_batch_size", default=16, type=int, required=False, help="Evaluation batch size")
 
     parser.add_argument("--learning_rate", default=1e-5, type=float, required=False, help="Learning rate")
 
@@ -307,8 +321,8 @@ def main():
     parser.add_argument("--num_of_accumulation_steps", default=16, type=int, required=False,
                         help="Number of accumulation steps")
 
-    parser.add_argument("--num_of_negative_samples", default=6, type=int, required=False, help="Number of negative "
-                                                                                               "samples")
+    parser.add_argument("--num_of_negative_samples", default=15, type=int, required=False, help="Number of negative "
+                                                                                                "samples")
 
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
 
@@ -331,10 +345,12 @@ def main():
                         format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=args.log_level)
-    logging.info("Process rank: %s, device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
-                 args.local_rank, device, args.n_gpu, args.lang, args.loss_function)
+    logging.info("Device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
+                 device, args.n_gpu, args.lang, args.loss_function)
 
+    logging.debug("args: %s", args)
     print("loglevel: ", args.log_level)
+
 
     # Set seed
     set_seed(args)
