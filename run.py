@@ -158,8 +158,8 @@ def train(args, model, optimizer, training_set):
                 continue
 
             # query = doc
-            query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-            query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            query_id = batch['doc_ids'][0].unsqueeze(0).to(torch.device(args.device))
+            query_mask = batch['doc_mask'][0].unsqueeze(0).to(torch.device(args.device))
             inputs = {'input_ids': query_id, 'attention_mask': query_mask}
             query = model(**inputs)[1]  # using pooled values
 
@@ -226,8 +226,8 @@ def evaluation(args, model, valid_set):
             continue
 
         # query = doc
-        query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-        query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+        query_id = batch['doc_ids'][0].unsqueeze(0).to(torch.device(args.device))
+        query_mask = batch['doc_mask'][0].unsqueeze(0).to(torch.device(args.device))
         inputs = {'input_ids': query_id, 'attention_mask': query_mask}
         query = model(**inputs)[1]  # using pooled values
 
