@@ -172,7 +172,7 @@ def train(args, model, optimizer, training_set):
 
             code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                           batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
-                         range(1, batch_size)]
+                         range(0, batch_size)]
 
             positive_code_key = code_list.pop(0)
             inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
@@ -233,7 +233,7 @@ def evaluation(args, model, valid_set):
 
         batch_size = args.eval_batch_size
         code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
-                      batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in range(1, batch_size)]
+                      batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in range(0, batch_size)]
 
         positive_code_key = code_list.pop(0)
         inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
