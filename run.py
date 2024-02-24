@@ -146,7 +146,7 @@ def write_mrr_to_file(args, mrr, test=False):
         file.write(mrr_new)
 
 
-def train(args, model, optimizer, training_set):
+def train(args, model, optimizer, training_set, valid_set):
     logging.info("Start training ...")
     print("Start training ...")
     for epoch in tqdm(range(1, args.num_train_epochs + 1)):
@@ -225,6 +225,51 @@ def train(args, model, optimizer, training_set):
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
 
         del train_dataloader
+
+        # validation
+        validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
+        all_eval_losses = []
+        for idx, batch in enumerate(validation_dataloader):
+            if batch['code_ids'].size(0) < args.train_batch_size:
+                logging.debug("continue")
+                continue
+
+            query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+            query = model(**inputs)[1]
+
+            code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
+                          batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
+                         range(0, args.train_batch_size)]
+
+            positive_code_key = code_list.pop(0)
+            inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+            positive_code_key = model(**inputs)[1]  # using pooled values
+
+            negative_keys = []
+
+            for code, mask in code_list:
+                inputs = {'input_ids': code, 'attention_mask': mask}
+
+                negative_key = model(**inputs)[1]  # using pooled values
+                negative_keys.append(negative_key.clone().detach())
+
+            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
+                                               dim=0)
+
+            if args.loss_function == 'INFO_NCE':
+                loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
+            elif args.loss_function == 'triplet':
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                loss = triplet_loss(query, positive_code_key, negative_key)
+            else:
+                loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
+
+            all_eval_losses.append(loss.to("cpu").detach().numpy())
+            eval_mean_loss = np.mean(all_eval_losses)
+            logging.info(f'Epoch {epoch} - Eval-Loss: {eval_mean_loss}')
+
     logging.info("Training finished")
 
 
@@ -378,7 +423,7 @@ def main():
     model.to(torch.device(args.device))
 
     # train
-    train(args, model, optimizer, training_set)
+    train(args, model, optimizer, training_set, valid_set)
 
     # evaluate
     distances = evaluation(args, model, test_set)
