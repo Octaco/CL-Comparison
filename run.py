@@ -68,16 +68,16 @@ class CustomDataset(TensorDataset):
 
 
 def info_nce_loss(query, positive_key, negative_keys):
-    query = torch.flatten(query).view(-1).unsqueeze(0)
-    positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
-    negative_keys = torch.stack([torch.flatten(code_emb).view(-1) for code_emb in negative_keys])
+    # query = torch.flatten(query).view(-1).unsqueeze(0)
+    # positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
+    # negative_keys = torch.stack([torch.flatten(code_emb).view(-1) for code_emb in negative_keys])
     return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
 
 
 def triplet_loss(query, positive_key, negative_key):
-    query = torch.flatten(query).view(-1).unsqueeze(0)
-    positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
-    negative_key = torch.flatten(negative_key).view(-1).unsqueeze(0)
+    # query = torch.flatten(query).view(-1).unsqueeze(0)
+    # positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
+    # negative_key = torch.flatten(negative_key).view(-1).unsqueeze(0)
     return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_key)
 
 
@@ -169,7 +169,7 @@ def train(args, model, optimizer, training_set):
             query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': query_id, 'attention_mask': query_mask}
             query = model(**inputs)[1]  # using pooled values
-            query = model(**inputs)[0]  # using un-pooled values
+            # query = model(**inputs)[0]  # using un-pooled values
             # print("query shape: ", query.shape)
 
             logging.debug(f"idx: {idx}")
@@ -188,7 +188,7 @@ def train(args, model, optimizer, training_set):
             positive_code_key = code_list.pop(0)
             inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
             positive_code_key = model(**inputs)[1]  # using pooled values
-            positive_code_key = model(**inputs)[0]  # using un-pooled values
+            # positive_code_key = model(**inputs)[0]  # using un-pooled values
 
             negative_keys = []
 
@@ -196,7 +196,7 @@ def train(args, model, optimizer, training_set):
                 inputs = {'input_ids': code, 'attention_mask': mask}
 
                 negative_key = model(**inputs)[1]  # using pooled values
-                negative_key = model(**inputs)[0]  # using un-pooled values
+                # negative_key = model(**inputs)[0]  # using un-pooled values
                 negative_keys.append(negative_key.clone().detach())
 
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
