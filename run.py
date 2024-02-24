@@ -232,42 +232,40 @@ def evaluation(args, model, valid_set):
     logging.info("Evaluate ...")
     print("Evaluate ...")
 
-    batch_size = args.eval_batch_size
+    batch_size = 1
     eval_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
 
     all_distances = []
-    for idx, batch in tqdm(enumerate(eval_dataloader)):
+    progress_bar = tqdm(eval_dataloader, position=0, leave=True)
+    for idx, batch in enumerate(progress_bar):
 
-        if batch['code_ids'].size(0) < args.train_batch_size:
-            logging.debug("continue")
-            continue
-
-        # query = doc
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': query_id, 'attention_mask': query_mask}
         query = model(**inputs)[1]  # using pooled values
-        query = model(**inputs)[0]  # using un-pooled values
 
-        batch_size = args.eval_batch_size
-        code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
-                      batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in range(0, batch_size)]
-
-        positive_code_key = code_list.pop(0)
-        inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+        positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+        positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
         positive_code_key = model(**inputs)[1]  # using pooled values
-        positive_code_key = model(**inputs)[0]  # using un-pooled values
+
+        # negative_keys
+        sample_indices = list(range(len(eval_dataloader)))
+        sample_indices.remove(idx)
+        sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
+
+        subset = torch.utils.data.Subset(valid_set, sample_indices)
+        data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
 
         negative_keys = []
-
-        for code, mask in code_list:
-            inputs = {'input_ids': code, 'attention_mask': mask}
-
-            negative_key = model(**inputs)[1]  # using pooled values
-            negative_key = model(**inputs)[0]  # using un-pooled values
+        for idx2, batch2 in enumerate(data_loader_subset):
+            code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
+            negative_key = model(**inputs)[1]
             negative_keys.append(negative_key.clone().detach())
 
-        negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
+        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
         # calc Euclidean distance for positive key at first position
         distances = [np.linalg.norm((query - positive_code_key).detach().cpu().numpy())]
@@ -326,7 +324,7 @@ def main():
 
     parser.add_argument("--num_of_negative_samples", default=15, type=int, required=False, help="Number of negative "
                                                                                                 "samples")
-
+    parser.add_argument("--num_of_distractors", default=99, type=int, required=False, help="Number of distractors")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
 
     args = parser.parse_args()
