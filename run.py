@@ -131,7 +131,7 @@ def calculate_mrr_from_distances(distances_lists):
     return mean_mrr
 
 
-def write_mrr_to_file(args, mrr, test=False):
+def write_mrr_to_file(args, mrr, runtime=" ", test=False):
     mrr_old = ""
     with open(args.mrr_path, "r") as file:
         mrr_old = file.read()
@@ -140,9 +140,17 @@ def write_mrr_to_file(args, mrr, test=False):
         now = datetime.now().strftime("%d/%m/%Y%H:%M")
 
         if test:
-            mrr_new = f"{mrr_old}(test) {now}:{args.lang},{args.loss_function} {mrr}\n"
+            mrr_addition = "(test)"
         else:
-            mrr_new = f"{mrr_old}{now}:{args.lang},{args.loss_function} {mrr}\n"
+            mrr_addition = ""
+            # mrr_new = f"{mrr_old}{now}:{args.lang},{args.loss_function} {mrr}\n"
+
+        mrr_addition += (
+            f"{now}: {args.lang} {args.loss_function} epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
+            f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
+            f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr}\n")
+
+        mrr_new = f"{mrr_old}{mrr_addition}"
         file.write(mrr_new)
 
 
@@ -219,7 +227,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 # print("model updated")
                 optimizer.step()
                 optimizer.zero_grad()
-            logging.debug(f"train_los s epoch {epoch}: {loss}")
+            logging.debug(f"train_loss epoch {epoch}: {loss}")
 
         train_mean_loss = np.mean(all_losses)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
@@ -228,8 +236,8 @@ def train(args, model, optimizer, training_set, valid_set):
 
         # validation
         validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
-        all_eval_losses = []
-        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval", position=0, leave=True)
+        all_val_losses = []
+        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=0, leave=True)
         for idx, batch in enumerate(progress_bar):
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
@@ -267,9 +275,11 @@ def train(args, model, optimizer, training_set, valid_set):
             else:
                 loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
 
-            all_eval_losses.append(loss.to("cpu").detach().numpy())
-        eval_mean_loss = np.mean(all_eval_losses)
-        logging.info(f'Epoch {epoch} - Eval-Loss: {eval_mean_loss}')
+            all_val_losses.append(loss.to("cpu").detach().numpy())
+        val_mean_loss = np.mean(all_val_losses)
+        logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
+
+        del validation_dataloader
 
     logging.info("Training finished")
 
@@ -345,7 +355,7 @@ def main():
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
 
-    parser.add_argument("--log_path", default='../logging', type=str, required=False,
+    parser.add_argument("--log_path", default='./logging', type=str, required=False,
                         help="Path to log files")
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
@@ -398,7 +408,6 @@ def main():
     logging.debug("args: %s", args)
     print("loglevel: ", args.log_level)
 
-
     # Set seed
     set_seed(args)
 
@@ -433,7 +442,6 @@ def main():
     logging.info(f"MRR: {mrr}")
 
     # write mrr to file
-    write_mrr_to_file(args, mrr)
 
     # Calculate runtime duration in seconds
     end_time = time.time()
@@ -445,6 +453,9 @@ def main():
 
     # Print or log the runtime
     print(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
+    runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
+
+    write_mrr_to_file(args, mrr, runtime)
 
 
 if __name__ == '__main__':
