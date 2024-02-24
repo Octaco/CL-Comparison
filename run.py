@@ -157,7 +157,7 @@ def train(args, model, optimizer, training_set, valid_set):
 
         all_losses = []
 
-        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch}", position=0, leave=True)
+        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch} Train", position=0, leave=True)
         for idx, batch in enumerate(progress_bar):
 
             if batch['code_ids'].size(0) < args.train_batch_size:
@@ -229,7 +229,8 @@ def train(args, model, optimizer, training_set, valid_set):
         # validation
         validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
         all_eval_losses = []
-        for idx, batch in enumerate(validation_dataloader):
+        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval", position=0, leave=True)
+        for idx, batch in enumerate(progress_bar):
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
                 continue
@@ -267,8 +268,8 @@ def train(args, model, optimizer, training_set, valid_set):
                 loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
 
             all_eval_losses.append(loss.to("cpu").detach().numpy())
-            eval_mean_loss = np.mean(all_eval_losses)
-            logging.info(f'Epoch {epoch} - Eval-Loss: {eval_mean_loss}')
+        eval_mean_loss = np.mean(all_eval_losses)
+        logging.info(f'Epoch {epoch} - Eval-Loss: {eval_mean_loss}')
 
     logging.info("Training finished")
 
