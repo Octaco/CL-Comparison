@@ -157,7 +157,7 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False):
 def train(args, model, optimizer, training_set, valid_set):
     logging.info("Start training ...")
     print("Start training ...")
-    for epoch in tqdm(range(1, args.num_train_epochs + 1), dynamic_ncols=True, position=1, leave=False):
+    for epoch in tqdm(range(1, args.num_train_epochs + 1), dynamic_ncols=True, position=0, leave=False):
         logging.info("training epoch %d", epoch)
 
         # random.shuffle(training_set)
@@ -165,7 +165,7 @@ def train(args, model, optimizer, training_set, valid_set):
 
         all_losses = []
 
-        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch} Train", position=0, leave=False, dynamic_ncols=True)
+        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch} Train", position=1, leave=False, dynamic_ncols=True)
         for idx, batch in enumerate(progress_bar):
 
             if batch['code_ids'].size(0) < args.train_batch_size:
@@ -237,7 +237,7 @@ def train(args, model, optimizer, training_set, valid_set):
         # validation
         validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
         all_val_losses = []
-        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=0, leave=False, dynamic_ncols=True)
+        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=1, leave=False, dynamic_ncols=True)
         for idx, batch in enumerate(progress_bar):
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
@@ -292,7 +292,7 @@ def evaluation(args, model, valid_set):
     eval_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
 
     all_distances = []
-    progress_bar = tqdm(eval_dataloader, position=0, leave=False, dynamic_ncols=True)
+    progress_bar = tqdm(eval_dataloader, position=2, leave=False, dynamic_ncols=True)
     for idx, batch in enumerate(progress_bar):
 
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
