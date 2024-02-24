@@ -15,5 +15,5 @@ python3 ./run.py \
     --mrr_path ./data/MRR.txt \
     --log_level INFO \
     --num_of_accumulation_steps 16 \
-    -- num_of_distractors 99 \
+    --num_of_distractors 99 \
     --GPU "$GPU"
