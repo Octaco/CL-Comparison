@@ -292,7 +292,7 @@ def evaluation(args, model, valid_set):
     eval_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
 
     all_distances = []
-    progress_bar = tqdm(eval_dataloader, desc="Validation", position=0, leave=True, dynamic_ncols=True)
+    progress_bar = tqdm(eval_dataloader, desc="Validation", position=3, leave=True, dynamic_ncols=True)
     for idx, batch in enumerate(progress_bar):
 
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
