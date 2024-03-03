@@ -440,7 +440,16 @@ def main():
     valid_set = CustomDataset(valid_dataset, args)
 
     # model
-    model = RobertaModel.from_pretrained('microsoft/codebert-base')
+
+    if args.learning_architecture == 'SimCLR':
+        model = UniEncoderModel(args.model_name)
+    elif args.learning_architecture == 'SimSiam':
+        model = BiEncoderModel(args.model_name)
+    elif args.learning_architecture == 'MoCo':
+        model = MoCoModel(args.model_name)
+    else:
+        exit("Learning architecture not supported")
+
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
     model.to(torch.device(args.device))
 
