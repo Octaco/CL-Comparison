@@ -1,4 +1,6 @@
 import argparse
+from sklearn.manifold import TSNE
+
 import logging
 import random
 
@@ -10,6 +12,7 @@ from pytorch_metric_learning import losses
 from info_nce import InfoNCE
 from transformers import RobertaModel, RobertaTokenizer
 from datasets import load_dataset
+import matplotlib.pyplot as plt
 
 from datetime import datetime
 import time
@@ -161,7 +164,6 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False):
 
 
 def visualize_losses(train_losses, val_losses, args):
-    import matplotlib.pyplot as plt
     plt.plot(train_losses, label='Training loss')
     plt.plot(val_losses, label='Validation loss')
     plt.title('Losses')
@@ -172,6 +174,139 @@ def visualize_losses(train_losses, val_losses, args):
     filepath = args.data_path + "/plots/losses.png"
     plt.savefig(filepath)
     plt.show()
+
+
+def visualize_embeddings(args, idx, query_embedding, positive_embedding, negative_embeddings, first_time):
+    # Combine all embeddings
+    # all_embeddings = [query_embedding, positive_embedding] + [negative_embeddings]
+
+    all_embeddings = np.concatenate((query_embedding, positive_embedding, negative_embeddings), axis=0)
+
+    # Perform t-SNE dimensionality reduction
+    tsne = TSNE(n_components=2, random_state=42, perplexity=5)
+    embeddings_2d = tsne.fit_transform(all_embeddings)
+
+    # Plot the embeddings
+    plt.figure(figsize=(10, 8))
+
+    # Plot query embedding
+    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query')
+
+    # Plot positive embedding
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive')
+
+    # Plot negative embeddings
+    for i in range(2, len(all_embeddings)):
+        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='red', label='Negative')
+
+    plt.legend(['Query', 'Positive', 'Negative'])
+
+    plt.title('t-SNE Visualization of Embeddings')
+    plt.xlabel('t-SNE Dimension 1')
+    plt.ylabel('t-SNE Dimension 2')
+
+    # Save plot
+    if first_time:
+        filepath = args.data_path + f"/plots/embeddings{idx}.png"
+    else:
+        filepath = args.data_path + f"/plots/embeddings{idx}_after_training.png"
+    plt.savefig(filepath)
+    # plt.show()
+
+
+def visualize_multiple_embeddings(args, embedding_tuples):
+    # Combine all embeddings
+    all_embeddings = []
+    for query, positive, negatives in embedding_tuples:
+        all_embeddings.append(query.detach().cpu().numpy())
+        all_embeddings.append(positive.detach().cpu().numpy())
+        for neg in negatives:
+            all_embeddings.append(neg.detach().cpu().numpy())
+
+    all_embeddings = np.array(all_embeddings)
+    all_embeddings = np.reshape(all_embeddings, (33, 768))
+
+    # Perform t-SNE dimensionality reduction
+    tsne = TSNE(n_components=2, random_state=42)
+    embeddings_2d = tsne.fit_transform(all_embeddings)
+
+    # Plot the embeddings
+    plt.figure(figsize=(10, 8))
+
+    num_embeddings = len(embedding_tuples)
+
+    # Plot embeddings for each tuple
+    colors = ['blue', 'green', 'red']  # colors for query, positive key, and negative keys
+    labels = ['Query', 'Positive', 'Negative']
+    for i, (query, positive, negatives) in enumerate(embedding_tuples):
+        start_idx = i * (1 + len(negatives))
+        end_idx = start_idx + 1 + len(negatives)
+
+        # Plot query
+        plt.scatter(embeddings_2d[start_idx, 0], embeddings_2d[start_idx, 1], color=colors[0], label=labels[0])
+
+        # Plot positive key
+        plt.scatter(embeddings_2d[start_idx + 1, 0], embeddings_2d[start_idx + 1, 1], color=colors[1], label=labels[1])
+
+        # Plot negative keys
+        for j in range(len(negatives)):
+            plt.scatter(embeddings_2d[start_idx + 1 + j, 0], embeddings_2d[start_idx + 1 + j, 1], color=colors[2],label=labels[2])
+
+    plt.legend(['Query', 'Positive', 'Negative'])
+    plt.title('t-SNE Visualization of Embeddings')
+    plt.xlabel('t-SNE Dimension 1')
+    plt.ylabel('t-SNE Dimension 2')
+    # Save plot
+    filepath = args.data_path + "/plots/all_embeddings.png"
+    plt.savefig(filepath)
+    # plt.show()
+
+
+def visualize(args, model, visualisation_set, first_time=True):
+    logging.info("Visualize ...")
+
+    batch_size = 1
+    visual_dataloader = DataLoader(visualisation_set, batch_size=batch_size, shuffle=False)
+
+    all_embeddings = []
+    for idx, batch in enumerate(visual_dataloader):
+
+        if idx > 2:
+            break
+
+        query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+        query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+        inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+        query = model(**inputs)[1]
+
+        positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+        positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+        positive_code_key = model(**inputs)[1]
+
+        # negative_keys
+        sample_indices = list(range(len(visual_dataloader)))
+        sample_indices.remove(idx)
+        sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
+
+        subset = torch.utils.data.Subset(visualisation_set, sample_indices)
+        data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
+
+        negative_keys = []
+        for idx2, batch2 in enumerate(data_loader_subset):
+            code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
+            negative_key = model(**inputs)[1]
+            negative_keys.append(negative_key.clone().detach())
+
+        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+
+        all_embeddings.append((query, positive_code_key, negative_keys))
+        visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
+                             negative_keys_reshaped.detach().cpu().numpy(), first_time)
+
+    # visualize_multiple_embeddings(args, all_embeddings)
 
 
 def train(args, model, optimizer, training_set, valid_set):
@@ -448,6 +583,8 @@ def main():
     valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
     train_dataset = train_dataset.reset_index(drop=True)
     test_dataset = test_df.reset_index(drop=True)
+    visualisation_dataset = test_dataset.sample(99)
+    visualisation_dataset = visualisation_dataset.reset_index(drop=True)
 
     logging.debug("TRAIN Dataset: %s", train_dataset.shape)
     logging.debug("VAL Dataset: %s", valid_dataset.shape)
@@ -456,6 +593,7 @@ def main():
     training_set = CustomDataset(train_dataset, args)
     test_set = CustomDataset(test_dataset, args)
     valid_set = CustomDataset(valid_dataset, args)
+    visualization_set = CustomDataset(visualisation_dataset, args)
 
     # model
 
@@ -471,6 +609,9 @@ def main():
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
     model.to(torch.device(args.device))
 
+    # visualize
+    visualize(args, model, visualization_set, True)
+
     # train
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
@@ -479,6 +620,9 @@ def main():
 
     # evaluate
     distances = evaluation(args, model, test_set)
+
+    # visualize again
+    visualize(args, model, visualization_set, False)
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
