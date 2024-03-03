@@ -17,7 +17,7 @@ from tqdm import tqdm
 from models import UniEncoderModel, BiEncoderModel, MoCoModel
 
 LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
-LEARNING_ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
+ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
 
 
 class CustomDataset(TensorDataset):
@@ -139,8 +139,8 @@ def calculate_mrr_from_distances(distances_lists):
 
 
 def write_mrr_to_file(args, mrr, runtime=" ", test=False):
-    mrr_old = ""
-    with open(args.mrr_path, "r") as file:
+    mrr_path = args.data_path / "MRR.txt"
+    with open(mrr_path, "r") as file:
         mrr_old = file.read()
 
     with open(args.mrr_path, "w") as file:
@@ -150,10 +150,9 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False):
             mrr_addition = "(test)"
         else:
             mrr_addition = ""
-            # mrr_new = f"{mrr_old}{now}:{args.lang},{args.loss_function} {mrr}\n"
 
         mrr_addition += (
-            f"{now}: {args.lang} {args.loss_function} epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
+            f"{now}: {args.lang} {args.loss_function} {args.architecture}epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
             f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
             f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr}\n")
 
@@ -358,8 +357,8 @@ def main():
     parser.add_argument("--loss_function", default="InfoNCE", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
-    parser.add_argument("--learning_architecture", default="SimCLR", type=str, required=False,
-                        help="Learning architecture selected in the list: " + ", ".join(LEARNING_ARCHITECTURES))
+    parser.add_argument("--architecture", default="SimCLR", type=str, required=False,
+                        help="Learning architecture selected in the list: " + ", ".join(ARCHITECTURES))
 
     parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
                         help="Pretrained tokenizer name or path if not the same as model_name")
@@ -383,7 +382,7 @@ def main():
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
 
-    parser.add_argument("--mrr_path", default='./data/MRR.txt', type=str, required=False, help="Path to mrr file")
+    parser.add_argument("--data_path", default='./data', type=str, required=False, help="Path to data folder")
 
     parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
@@ -441,11 +440,11 @@ def main():
 
     # model
 
-    if args.learning_architecture == 'SimCLR':
+    if args.architecture == 'SimCLR':
         model = UniEncoderModel(args.model_name)
-    elif args.learning_architecture == 'SimSiam':
+    elif args.architecture == 'SimSiam':
         model = BiEncoderModel(args.model_name)
-    elif args.learning_architecture == 'MoCo':
+    elif args.architecture == 'MoCo':
         model = MoCoModel(args.model_name)
     else:
         exit("Learning architecture not supported")
