@@ -645,11 +645,11 @@ def main():
     # visualize train and val losses
     visualize_losses(train_losses, val_losses, args)
 
-    # evaluate
-    distances = evaluation(args, model, test_set)
-
     # visualize again
     visualize(args, model, visualization_set, False)
+
+    # evaluate
+    distances = evaluation(args, model, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
