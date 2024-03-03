@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from pytorch_metric_learning import losses
 from info_nce import InfoNCE
 from transformers import RobertaModel, RobertaTokenizer
 from datasets import load_dataset
@@ -13,8 +14,9 @@ from datasets import load_dataset
 from datetime import datetime
 import time
 from tqdm import tqdm
+from models import UniEncoderModel, BiEncoderModel, MoCoModel
 
-LOSS_FUNCTIONS = ['triplet', 'INFO_NCE', 'soft_nearest_neighbour']
+LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
 LEARNING_ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
 
 
@@ -67,22 +69,27 @@ class CustomDataset(TensorDataset):
         }
 
 
+class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, pos_margin=0, neg_margin=1, **kwargs):
+        super().__init__()
+        self.pos_margin = pos_margin
+        self.neg_margin = neg_margin
+
+    def _compute_loss(self, querry, key, is_positive):
+        distance = torch.nn.functional.pairwise_distance(querry, key)
+
+
 def info_nce_loss(query, positive_key, negative_keys):
-    # query = torch.flatten(query).view(-1).unsqueeze(0)
-    # positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
-    # negative_keys = torch.stack([torch.flatten(code_emb).view(-1) for code_emb in negative_keys])
     return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
 
 
 def triplet_loss(query, positive_key, negative_key):
-    # query = torch.flatten(query).view(-1).unsqueeze(0)
-    # positive_key = torch.flatten(positive_key).view(-1).unsqueeze(0)
-    # negative_key = torch.flatten(negative_key).view(-1).unsqueeze(0)
     return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_key)
 
 
-def soft_nearest_neighbour_loss(query, positive_key, negative_keys):
-    return torch.nn.SoftMarginLoss()(query, positive_key, negative_keys[0])
+def contrastive_loss(query, positive_key, negative_keys):
+    loss_func = losses.ContrastiveLoss()
+    return loss_func(query, positive_key, negative_keys)
 
 
 def load_data(args):
@@ -210,14 +217,15 @@ def train(args, model, optimizer, training_set, valid_set):
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
                                                dim=0)
 
-            if args.loss_function == 'INFO_NCE':
+            if args.loss_function == 'InfoNCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
+            elif args.loss_function == 'ContrastiveLoss':
+                loss = contrastive_loss(query, positive_code_key, negative_keys_reshaped)
             else:
-                loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
-
+                exit("Loss function not supported")
             # print(loss)
             loss.backward()
 
@@ -237,7 +245,8 @@ def train(args, model, optimizer, training_set, valid_set):
         # validation
         validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
         all_val_losses = []
-        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True, dynamic_ncols=True)
+        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
+                            dynamic_ncols=True)
         for idx, batch in enumerate(progress_bar):
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
@@ -267,13 +276,16 @@ def train(args, model, optimizer, training_set, valid_set):
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
                                                dim=0)
 
-            if args.loss_function == 'INFO_NCE':
+            if args.loss_function == 'InfoNCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
+            elif args.loss_function == 'ContrastiveLoss':
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                loss = contrastive_loss(query, positive_code_key, negative_key)
             else:
-                loss = soft_nearest_neighbour_loss(query, positive_code_key, negative_keys_reshaped)
+                exit("Loss function not supported")
 
             all_val_losses.append(loss.to("cpu").detach().numpy())
         val_mean_loss = np.mean(all_val_losses)
@@ -343,10 +355,10 @@ def main():
     start_time = time.time()
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--loss_function", default="INFO_NCE", type=str, required=False,
+    parser.add_argument("--loss_function", default="InfoNCE", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
-    parser.add_argument("--learning_architecture", default=None, type=str, required=False,
+    parser.add_argument("--learning_architecture", default="SimCLR", type=str, required=False,
                         help="Learning architecture selected in the list: " + ", ".join(LEARNING_ARCHITECTURES))
 
     parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
