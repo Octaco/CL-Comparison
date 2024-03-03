@@ -224,7 +224,8 @@ def visualize_multiple_embeddings(args, embedding_tuples):
             all_embeddings.append(neg.detach().cpu().numpy())
 
     all_embeddings = np.array(all_embeddings)
-    all_embeddings = np.reshape(all_embeddings, (33, 768))
+    # reshape to 2d
+    all_embeddings = all_embeddings.reshape(-1, all_embeddings.shape[-1])
 
     # Perform t-SNE dimensionality reduction
     tsne = TSNE(n_components=2, random_state=42)
@@ -239,7 +240,8 @@ def visualize_multiple_embeddings(args, embedding_tuples):
     colors = ['blue', 'green', 'red']  # colors for query, positive key, and negative keys
     labels = ['Query', 'Positive', 'Negative']
     for i, (query, positive, negatives) in enumerate(embedding_tuples):
-        start_idx = i * (1 + len(negatives))
+        start_idx = i * (2 + len(negatives))
+        print("len(negatives): ", len(negatives))
         end_idx = start_idx + 1 + len(negatives)
 
         # Plot query
@@ -250,7 +252,7 @@ def visualize_multiple_embeddings(args, embedding_tuples):
 
         # Plot negative keys
         for j in range(len(negatives)):
-            plt.scatter(embeddings_2d[start_idx + 1 + j, 0], embeddings_2d[start_idx + 1 + j, 1], color=colors[2],label=labels[2])
+            plt.scatter(embeddings_2d[start_idx + 1 + j + 1, 0], embeddings_2d[start_idx + 1 + j + 1, 1], color=colors[2], label=labels[2])
 
     plt.legend(['Query', 'Positive', 'Negative'])
     plt.title('t-SNE Visualization of Embeddings')
@@ -306,7 +308,7 @@ def visualize(args, model, visualisation_set, first_time=True):
         visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
                              negative_keys_reshaped.detach().cpu().numpy(), first_time)
 
-    # visualize_multiple_embeddings(args, all_embeddings)
+    visualize_multiple_embeddings(args, all_embeddings)
 
 
 def train(args, model, optimizer, training_set, valid_set):
