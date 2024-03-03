@@ -160,9 +160,25 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False):
         file.write(mrr_new)
 
 
+def visualize_losses(train_losses, val_losses, args):
+    import matplotlib.pyplot as plt
+    plt.plot(train_losses, label='Training loss')
+    plt.plot(val_losses, label='Validation loss')
+    plt.title('Losses')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    # save plot
+    filepath = args.data_path + "/plots/losses.png"
+    plt.savefig(filepath)
+    plt.show()
+
+
 def train(args, model, optimizer, training_set, valid_set):
     logging.info("Start training ...")
     print("Start training ...")
+    all_train_mean_losses = []
+    all_val_mean_losses = []
     for epoch in tqdm(range(1, args.num_train_epochs + 1), desc="Epochs", dynamic_ncols=True, position=0, leave=True):
         logging.info("training epoch %d", epoch)
 
@@ -237,6 +253,7 @@ def train(args, model, optimizer, training_set, valid_set):
             logging.debug(f"train_loss epoch {epoch}: {loss}")
 
         train_mean_loss = np.mean(all_losses)
+        all_train_mean_losses.append(train_mean_loss)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
 
         del train_dataloader
@@ -288,11 +305,13 @@ def train(args, model, optimizer, training_set, valid_set):
 
             all_val_losses.append(loss.to("cpu").detach().numpy())
         val_mean_loss = np.mean(all_val_losses)
+        all_val_mean_losses.append(val_mean_loss)
         logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
         del validation_dataloader
 
     logging.info("Training finished")
+    return all_train_mean_losses, all_val_mean_losses
 
 
 def evaluation(args, model, valid_set):
@@ -453,7 +472,10 @@ def main():
     model.to(torch.device(args.device))
 
     # train
-    train(args, model, optimizer, training_set, valid_set)
+    train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
+
+    # visualize train and val losses
+    visualize_losses(train_losses, val_losses, args)
 
     # evaluate
     distances = evaluation(args, model, test_set)

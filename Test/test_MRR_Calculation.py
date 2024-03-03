@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from src.main import calculate_mrr_from_distances
+from run import calculate_mrr_from_distances
 
 
 class TestMRRCalculation(unittest.TestCase):
