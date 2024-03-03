@@ -5,7 +5,7 @@ GPU=$1
 
 python3 ./run.py \
     --loss_function INFO_NCE \
-    --log_path ./logging \
+    --data_path ./data \
     --lang ruby \
     --train_batch_size 16 \
     --eval_batch_size 16 \
