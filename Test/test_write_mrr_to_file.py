@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--loss_function", default="INFO_NCE", type=str, required=False)
 
-parser.add_argument("--learning_architecture", default=None, type=str, required=False)
+parser.add_argument("--architecture", default=None, type=str, required=False)
 
 parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
                     help="Pretrained tokenizer name or path if not the same as model_name")
@@ -43,7 +43,7 @@ parser.add_argument("--num_train_epochs", default=5, type=int, required=False, h
 parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                   "for training")
 
-parser.add_argument("--mrr_path", default='../data/MRR.txt', type=str, required=False, help="Path to mrr file")
+parser.add_argument("--data_path", default='../data/', type=str, required=False, help="Path to mrr file")
 
 parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 

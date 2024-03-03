@@ -142,11 +142,11 @@ def calculate_mrr_from_distances(distances_lists):
 
 
 def write_mrr_to_file(args, mrr, runtime=" ", test=False):
-    mrr_path = args.data_path / "MRR.txt"
+    mrr_path = args.data_path + "MRR.txt"
     with open(mrr_path, "r") as file:
         mrr_old = file.read()
 
-    with open(args.mrr_path, "w") as file:
+    with open(mrr_path, "w") as file:
         now = datetime.now().strftime("%d/%m/%Y%H:%M")
 
         if test:
@@ -207,9 +207,9 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
 
     # Save plot
     if first_time:
-        filepath = args.data_path + f"/plots/embeddings{idx}.png"
+        filepath = args.data_path + f"plots/embeddings{idx}.png"
     else:
-        filepath = args.data_path + f"/plots/embeddings{idx}_after_training.png"
+        filepath = args.data_path + f"plots/embeddings{idx}_after_training.png"
     plt.savefig(filepath)
     # plt.show()
 
@@ -259,7 +259,7 @@ def visualize_multiple_embeddings(args, embedding_tuples):
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
     # Save plot
-    filepath = args.data_path + "/plots/all_embeddings.png"
+    filepath = args.data_path + "plots/all_embeddings.png"
     plt.savefig(filepath)
     # plt.show()
 
@@ -538,7 +538,7 @@ def main():
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
 
-    parser.add_argument("--data_path", default='./data', type=str, required=False, help="Path to data folder")
+    parser.add_argument("--data_path", default='./data/', type=str, required=False, help="Path to data folder")
 
     parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
 
