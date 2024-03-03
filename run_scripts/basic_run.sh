@@ -12,7 +12,7 @@ python3 ./run.py \
     --learning_rate 1e-5 \
     --num_train_epochs 5 \
     --train_size 0.8 \
-    --mrr_path ./data/MRR.txt \
+    --mrr_path ./data \
     --log_level INFO \
     --num_of_accumulation_steps 16 \
     --num_of_distractors 99 \
