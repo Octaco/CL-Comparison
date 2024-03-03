@@ -217,11 +217,18 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
 def visualize_multiple_embeddings(args, embedding_tuples):
     # Combine all embeddings
     all_embeddings = []
+    color_labels = []  # List to keep track of the color for each point
+
     for query, positive, negatives in embedding_tuples:
         all_embeddings.append(query.detach().cpu().numpy())
+        color_labels.append('Query')
+
         all_embeddings.append(positive.detach().cpu().numpy())
+        color_labels.append('Positive')
+
         for neg in negatives:
             all_embeddings.append(neg.detach().cpu().numpy())
+            color_labels.append('Negative')
 
     all_embeddings = np.array(all_embeddings)
     # reshape to 2d
@@ -234,34 +241,23 @@ def visualize_multiple_embeddings(args, embedding_tuples):
     # Plot the embeddings
     plt.figure(figsize=(10, 8))
 
-    num_embeddings = len(embedding_tuples)
+    unique_labels = set(color_labels)
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(unique_labels)))
+    color_dict = dict(zip(unique_labels, colors))
 
-    # Plot embeddings for each tuple
-    colors = ['blue', 'green', 'red']  # colors for query, positive key, and negative keys
-    labels = ['Query', 'Positive', 'Negative']
-    for i, (query, positive, negatives) in enumerate(embedding_tuples):
-        start_idx = i * (2 + len(negatives))
-        print("len(negatives): ", len(negatives))
-        end_idx = start_idx + 1 + len(negatives)
+    # Create a scatter plot for each type of embedding
+    for label, color in color_dict.items():
+        indices = [i for i, x in enumerate(color_labels) if x == label]
+        plt.scatter(embeddings_2d[indices, 0], embeddings_2d[indices, 1], color=color, label=label, alpha=0.5)
 
-        # Plot query
-        plt.scatter(embeddings_2d[start_idx, 0], embeddings_2d[start_idx, 1], color=colors[0], label=labels[0])
-
-        # Plot positive key
-        plt.scatter(embeddings_2d[start_idx + 1, 0], embeddings_2d[start_idx + 1, 1], color=colors[1], label=labels[1])
-
-        # Plot negative keys
-        for j in range(len(negatives)):
-            plt.scatter(embeddings_2d[start_idx + 1 + j + 1, 0], embeddings_2d[start_idx + 1 + j + 1, 1], color=colors[2], label=labels[2])
-
-    plt.legend(['Query', 'Positive', 'Negative'])
+    plt.legend()
     plt.title('t-SNE Visualization of Embeddings')
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
     # Save plot
     filepath = args.data_path + "plots/all_embeddings.png"
     plt.savefig(filepath)
-    # plt.show()
+    plt.show()
 
 
 def visualize(args, model, visualisation_set, first_time=True):
