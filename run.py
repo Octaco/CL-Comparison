@@ -214,21 +214,44 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     # plt.show()
 
 
+def adjust_lightness(color, amount=0.5):
+    """
+    Adjust the lightness of a color.
+    """
+    import matplotlib.colors as mc
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
+
+
 def visualize_multiple_embeddings(args, embedding_tuples):
-    # Combine all embeddings
+    # Combine all embeddings and prepare color labels
     all_embeddings = []
-    color_labels = []  # List to keep track of the color for each point
+    group_labels = []  # New list to keep track of group colors
 
-    for query, positive, negatives in embedding_tuples:
+
+    colours = ['blue', 'green', 'red']   # Get a colormap with enough colors
+
+    for idx, (query, positive, negatives) in enumerate(embedding_tuples):
+
+        colour_shift = 1 + (0.3 * idx) * (-1 ** idx)
+
+        # Query
         all_embeddings.append(query.detach().cpu().numpy())
-        color_labels.append('Query')
+        group_labels.append(('Query', adjust_lightness(colours[0], colour_shift)))
 
+        # Positive
         all_embeddings.append(positive.detach().cpu().numpy())
-        color_labels.append('Positive')
+        group_labels.append(('Positive', adjust_lightness(colours[1], colour_shift)))
 
+        # Negatives
         for neg in negatives:
             all_embeddings.append(neg.detach().cpu().numpy())
-            color_labels.append('Negative')
+            group_labels.append(('Negative', adjust_lightness(colours[2], colour_shift)))
 
     all_embeddings = np.array(all_embeddings)
     # reshape to 2d
@@ -239,25 +262,31 @@ def visualize_multiple_embeddings(args, embedding_tuples):
     embeddings_2d = tsne.fit_transform(all_embeddings)
 
     # Plot the embeddings
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(12, 10))
 
-    unique_labels = set(color_labels)
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(unique_labels)))
-    color_dict = dict(zip(unique_labels, colors))
+    # Plot each point with its group-specific color
+    for (label, color), (x, y) in zip(group_labels, embeddings_2d):
+        plt.scatter(x, y, color=color, label=label, alpha=0.5)
 
-    # Create a scatter plot for each type of embedding
-    for label, color in color_dict.items():
-        indices = [i for i, x in enumerate(color_labels) if x == label]
-        plt.scatter(embeddings_2d[indices, 0], embeddings_2d[indices, 1], color=color, label=label, alpha=0.5)
+    # Create a custom legend
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w', label='Query', markerfacecolor=colours[0],
+               markersize=10),
+        Line2D([0], [0], marker='o', color='w', label='Positive', markerfacecolor=colours[1],
+               markersize=10),
+        Line2D([0], [0], marker='o', color='w', label='Negative', markerfacecolor=colours[2],
+               markersize=10)]
 
-    plt.legend()
+    plt.legend(handles=legend_elements, loc='best')
     plt.title('t-SNE Visualization of Embeddings')
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
+
     # Save plot
     filepath = args.data_path + "plots/all_embeddings.png"
     plt.savefig(filepath)
-    plt.show()
+    # plt.show()
 
 
 def visualize(args, model, visualisation_set, first_time=True):
