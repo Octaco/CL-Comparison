@@ -228,7 +228,7 @@ def adjust_lightness(color, amount=0.5):
     return colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
 
 
-def visualize_multiple_embeddings(args, embedding_tuples):
+def visualize_multiple_embeddings(args, embedding_tuples, first_time):
     # Combine all embeddings and prepare color labels
     all_embeddings = []
     group_labels = []  # New list to keep track of group colors
@@ -284,7 +284,10 @@ def visualize_multiple_embeddings(args, embedding_tuples):
     plt.ylabel('t-SNE Dimension 2')
 
     # Save plot
-    filepath = args.data_path + "plots/all_embeddings.png"
+    if first_time:
+        filepath = args.data_path + "plots/all_embeddings.png"
+    else:
+        filepath = args.data_path + "plots/all_embeddings_after_training.png"
     plt.savefig(filepath)
     # plt.show()
 
@@ -333,7 +336,7 @@ def visualize(args, model, visualisation_set, first_time=True):
         visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
                              negative_keys_reshaped.detach().cpu().numpy(), first_time)
 
-    visualize_multiple_embeddings(args, all_embeddings)
+    visualize_multiple_embeddings(args, all_embeddings, first_time)
 
 
 def train(args, model, optimizer, training_set, valid_set):
