@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 from pytorch_metric_learning import losses
 from info_nce import InfoNCE
-from transformers import RobertaModel, RobertaTokenizer
+from transformers import RobertaTokenizer
 from datasets import load_dataset
 import matplotlib.pyplot as plt
 
@@ -72,15 +72,6 @@ class CustomDataset(TensorDataset):
         }
 
 
-class ContrastiveLoss(torch.nn.Module):
-    def __init__(self, pos_margin=0, neg_margin=1, **kwargs):
-        super().__init__()
-        self.pos_margin = pos_margin
-        self.neg_margin = neg_margin
-
-    def _compute_loss(self, querry, key, is_positive):
-        distance = torch.nn.functional.pairwise_distance(querry, key)
-
 
 def info_nce_loss(query, positive_key, negative_keys):
     return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
@@ -91,8 +82,12 @@ def triplet_loss(query, positive_key, negative_key):
 
 
 def contrastive_loss(query, positive_key, negative_keys):
+    all_keys = torch.cat([query, positive_key, negative_keys], dim=0)
+    labels = torch.zeros(len(all_keys), dtype=torch.long, device=query.device)
+    labels[0] = 0  # set lable of query to 0
+    labels[1] = 1  # set lable of positive key to 1
     loss_func = losses.ContrastiveLoss()
-    return loss_func(query, positive_key, negative_keys)
+    return loss_func(all_keys, labels)
 
 
 def load_data(args):
