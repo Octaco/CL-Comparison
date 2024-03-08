@@ -337,14 +337,13 @@ def visualize(args, model, visualisation_set, first_time=True):
 def train(args, model, optimizer, training_set, valid_set):
     logging.info("Start training ...")
     print("Start training ...")
-    model.train()
-    train_dataloader = DataLoader(training_set, batch_size=args.train_batch_size, shuffle=True)
-    validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
-
     all_train_mean_losses = []
     all_val_mean_losses = []
     for epoch in tqdm(range(1, args.num_train_epochs + 1), desc="Epochs", dynamic_ncols=True, position=0, leave=True):
         logging.info("training epoch %d", epoch)
+
+        # random.shuffle(training_set)
+        train_dataloader = DataLoader(training_set, batch_size=args.train_batch_size, shuffle=True)
 
         all_losses = []
 
@@ -417,14 +416,13 @@ def train(args, model, optimizer, training_set, valid_set):
         all_train_mean_losses.append(train_mean_loss)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
 
+        del train_dataloader
 
         # validation
-        model.eval()
-
+        validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
         all_val_losses = []
         progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
                             dynamic_ncols=True)
-
         for idx, batch in enumerate(progress_bar):
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
