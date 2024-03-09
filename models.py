@@ -1,5 +1,5 @@
 import torch
-from transformers import RobertaModel, RobertaTokenizer
+from transformers import RobertaModel
 
 
 class UniEncoderModel(torch.nn.Module):
@@ -19,7 +19,7 @@ class BiEncoderModel(torch.nn.Module):
         self.prediction_head = torch.nn.Linear(output_dim, output_dim)
 
     def forward(self, input_ids, attention_mask):
-        _, pooled_output = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        _ , pooled_output = self.model(input_ids=input_ids, attention_mask=attention_mask)
         logits = self.prediction_head(pooled_output)
         return logits
 

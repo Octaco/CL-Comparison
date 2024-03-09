@@ -84,7 +84,7 @@ def triplet_loss(query, positive_key, negative_key):
 def contrastive_loss(query, positive_key, negative_keys):
     all_keys = torch.cat([query, positive_key, negative_keys], dim=0)
     labels = torch.zeros(len(all_keys), dtype=torch.long, device=query.device)
-    labels[0] = 0  # set lable of query to 0
+    labels[0] = 2  # set lable of query to 0
     labels[1] = 1  # set lable of positive key to 1
     loss_func = losses.ContrastiveLoss()
     return loss_func(all_keys, labels)
