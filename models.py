@@ -7,8 +7,19 @@ class UniEncoderModel(torch.nn.Module):
         super(UniEncoderModel, self).__init__()
         self.model = RobertaModel.from_pretrained(model_name)
 
-    def forward(self, input_ids, attention_mask):
-        return self.model(input_ids=input_ids, attention_mask=attention_mask)
+    def forward(self, query, positive_key, negative_keys):
+
+        query_representation = self.model(**query)[1]  # using pooled values
+        positive_key_representation = self.model(**positive_key)[1]  # using pooled values
+
+        negative_keys_representation = []
+        for negative_key in negative_keys:
+            negative_key_representation = self.model(**negative_key)[1]  # using pooled values
+            negative_keys_representation.append(negative_key_representation)
+
+        negative_keys_reshaped = torch.cat(negative_keys_representation[: len(negative_keys)], dim=0)
+
+        return query_representation, positive_key_representation, negative_keys_reshaped
 
 
 class BiEncoderModel(torch.nn.Module):
