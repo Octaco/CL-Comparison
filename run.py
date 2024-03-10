@@ -82,12 +82,26 @@ def triplet_loss(query, positive_key, negative_key):
 
 
 def contrastive_loss(query, positive_key, negative_keys):
-    all_keys = torch.cat([query, positive_key, negative_keys], dim=0)
-    labels = torch.zeros(len(all_keys), dtype=torch.long, device=query.device)
-    labels[0] = 2  # set lable of query to 0
-    labels[1] = 1  # set lable of positive key to 1
+    # Ensure all tensors have the same number of dimensions
+    max_dim = max(query.dim(), positive_key.dim(), max(nk.dim() for nk in negative_keys))
+    query = query.unsqueeze(0) if query.dim() < max_dim else query
+    positive_key = positive_key.unsqueeze(0) if positive_key.dim() < max_dim else positive_key
+    negative_keys = [nk.unsqueeze(0) if nk.dim() < max_dim else nk for nk in negative_keys]
+
+    # Initialize the ContrastiveLoss function
     loss_func = losses.ContrastiveLoss()
-    return loss_func(all_keys, labels)
+
+    # Assuming query, positive_key, and negative_keys are all tensors of the same dimension
+    # Combine query, positive_key, and negative_keys into a single tensor
+    embeddings = torch.cat([query, positive_key] + negative_keys, dim=0)
+
+    # Create labels: query and positive_key belong to the same class (e.g., 0), and each negative_key has a different class
+    labels = torch.tensor([0, 0] + list(range(1, 1 + len(negative_keys))))
+
+    # Compute the loss
+    loss = loss_func(embeddings, labels)
+
+    return loss
 
 
 def load_data(args):
