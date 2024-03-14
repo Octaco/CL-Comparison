@@ -291,7 +291,10 @@ def train(args, model, optimizer, training_set, valid_set):
             # query = doc
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-            inputs_query = {'input_ids': query_id, 'attention_mask': query_mask}
+            inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+            query = model(**inputs)[1]  # using pooled values
+            # query = model(**inputs)[0]  # using un-pooled values
+            # print("query shape: ", query.shape)
 
             logging.debug(f"idx: {idx}")
             logging.debug(f"code_ids: {batch['code_ids'].shape}")
@@ -307,22 +310,29 @@ def train(args, model, optimizer, training_set, valid_set):
             # print("cl len: ",len(code_list))
 
             positive_code_key = code_list.pop(0)
-            inputs_positive_code_key = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+            inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+            positive_code_key = model(**inputs)[1]  # using pooled values
+            # positive_code_key = model(**inputs)[0]  # using un-pooled values
 
-            input_negative_keys = []
+            negative_keys = []
+
             for code, mask in code_list:
                 inputs = {'input_ids': code, 'attention_mask': mask}
-                input_negative_keys.append(inputs)
 
-            query, positive_code_key, negative_keys = model(inputs_query, inputs_positive_code_key, input_negative_keys)
+                negative_key = model(**inputs)[1]  # using pooled values
+                # negative_key = model(**inputs)[0]  # using un-pooled values
+                negative_keys.append(negative_key.clone().detach())
+
+            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
+                                               dim=0)
 
             if args.loss_function == 'InfoNCE':
-                loss = info_nce_loss(query, positive_code_key, negative_keys)
+                loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
-                negative_key = negative_keys[0].unsqueeze(0)
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
-                loss = contrastive_loss(query, positive_code_key)
+                loss = contrastive_loss(query, positive_code_key, negative_keys_reshaped)
             else:
                 exit("Loss function not supported")
             # print(loss)
@@ -354,29 +364,36 @@ def train(args, model, optimizer, training_set, valid_set):
 
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-            inputs_query = {'input_ids': query_id, 'attention_mask': query_mask}
+            inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+            query = model(**inputs)[1]
 
             code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                           batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
                          range(0, args.train_batch_size)]
 
             positive_code_key = code_list.pop(0)
-            inputs_positive_code_key = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+            inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+            positive_code_key = model(**inputs)[1]  # using pooled values
 
-            input_negative_keys = []
+            negative_keys = []
+
             for code, mask in code_list:
                 inputs = {'input_ids': code, 'attention_mask': mask}
-                input_negative_keys.append(inputs)
 
-            query, positive_code_key, negative_keys = model(inputs_query, inputs_positive_code_key, input_negative_keys)
+                negative_key = model(**inputs)[1]  # using pooled values
+                negative_keys.append(negative_key.clone().detach())
+
+            negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
+                                               dim=0)
 
             if args.loss_function == 'InfoNCE':
-                loss = info_nce_loss(query, positive_code_key, negative_keys)
+                loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
-                negative_key = negative_keys[0].unsqueeze(0)
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
-                loss = contrastive_loss(query, positive_code_key)
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                loss = contrastive_loss(query, positive_code_key, negative_key)
             else:
                 exit("Loss function not supported")
 
@@ -404,11 +421,13 @@ def evaluation(args, model, valid_set):
 
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs_query = {'input_ids': query_id, 'attention_mask': query_mask}
+        inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+        query = model(**inputs)[1]  # using pooled values
 
         positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs_positive_code_key = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+        positive_code_key = model(**inputs)[1]  # using pooled values
 
         # negative_keys
         sample_indices = list(range(len(eval_dataloader)))
@@ -418,21 +437,22 @@ def evaluation(args, model, valid_set):
         subset = torch.utils.data.Subset(valid_set, sample_indices)
         data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
 
-        input_negative_keys = []
+        negative_keys = []
         for idx2, batch2 in enumerate(data_loader_subset):
             code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-            input_negative_keys.append(inputs)
+            negative_key = model(**inputs)[1]
+            negative_keys.append(negative_key.clone().detach())
 
-        query, positive_code_key, negative_keys = model(inputs_query, inputs_positive_code_key, input_negative_keys)
+        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
         # calc Euclidean distance for positive key at first position
         distances = [np.linalg.norm((query - positive_code_key).detach().cpu().numpy())]
 
-        for i in range(len(negative_keys)):
+        for i in range(len(negative_keys_reshaped)):
             # calc Euclidean distance for negative keys
-            distance = np.linalg.norm((query - negative_keys[i]).detach().cpu().numpy())
+            distance = np.linalg.norm((query - negative_keys_reshaped[i]).detach().cpu().numpy())
 
             distances.append(distance)
 
