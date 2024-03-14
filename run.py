@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from pytorch_metric_learning import losses
 from info_nce import InfoNCE
 from transformers import RobertaTokenizer
 from datasets import load_dataset
@@ -80,7 +79,7 @@ def triplet_loss(query, positive_key, negative_key):
     return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_key)
 
 
-def contrastive_loss(query, positive_key, negative_keys):
+def contrastive_loss(args, query, positive_key, negative_keys):
     # Prepare labels
     negative_key = negative_keys[0]
     positive_label = torch.ones(1)  # Positive label
@@ -91,13 +90,14 @@ def contrastive_loss(query, positive_key, negative_keys):
 
     # Adjust dimensions of positive and negative keys
     # positive_key = positive_key.squeeze(0)
+    query = query.to(args.device)
     negative_key = negative_key.unsqueeze(0)
 
     # Concatenate positive and negative keys into one tensor
-    keys = torch.cat([positive_key, negative_key])
+    keys = torch.cat([positive_key, negative_key]).to(args.device)
 
     # Prepare target tensor
-    target = torch.tensor([1, 0])
+    target = torch.tensor([1, 0]).to(args.device)
     # Calculate loss
     loss_func = torch.nn.CosineEmbeddingLoss()
     loss = loss_func(query, keys, target)
@@ -333,7 +333,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
-                loss = contrastive_loss(query, positive_code_key, negative_keys_reshaped)
+                loss = contrastive_loss(args, query, positive_code_key, negative_keys_reshaped)
             else:
                 exit("Loss function not supported")
             # print(loss)
@@ -394,7 +394,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
-                loss = contrastive_loss(query, positive_code_key, negative_key)
+                loss = contrastive_loss(args, query, positive_code_key, negative_key)
             else:
                 exit("Loss function not supported")
 
