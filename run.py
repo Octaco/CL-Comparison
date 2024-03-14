@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from pytorch_metric_learning import losses
 from info_nce import InfoNCE
 from transformers import RobertaTokenizer
 from datasets import load_dataset
@@ -333,7 +332,9 @@ def train(args, model, optimizer, training_set, valid_set):
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
-                loss = contrastive_loss(query, positive_code_key, negative_keys_reshaped)
+                negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                loss = contrastive_loss(query.to(args.device), positive_code_key.to(args.device),
+                                        negative_key.to(args.device))
             else:
                 exit("Loss function not supported")
             # print(loss)
@@ -394,7 +395,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
-                loss = contrastive_loss(query, positive_code_key, negative_key)
+                loss = contrastive_loss(query.to(args.device), positive_code_key.to(args.device), negative_key.to(args.device))
             else:
                 exit("Loss function not supported")
 
