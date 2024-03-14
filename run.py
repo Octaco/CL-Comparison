@@ -82,15 +82,11 @@ def triplet_loss(query, positive_key, negative_key):
 def contrastive_loss(args, query, positive_key, negative_keys):
     # Prepare labels
     negative_key = negative_keys[0]
-    positive_label = torch.ones(1)  # Positive label
-    negative_label = torch.zeros(1)  # Negative label
 
-    # Adjust dimension of query
-    # query = query.unsqueeze(0)
+    query = query.to(args.device)
 
     # Adjust dimensions of positive and negative keys
-    # positive_key = positive_key.squeeze(0)
-    query = query.to(args.device)
+
     negative_key = negative_key.unsqueeze(0)
 
     # Concatenate positive and negative keys into one tensor
@@ -512,6 +508,11 @@ def main():
     args.dataset = 'codebert-base'
     args.model_name = 'microsoft/codebert-base'
     args.MAX_LEN = 512
+
+    # set minibatchsize to 2 for triplet and contrastive loss
+    if args.loss_function == "triplet" or args.loss_function == "ContrastiveLoss":
+        args.train_batch_size = 2
+        args.eval_batch_size = 2
 
     # Setup CUDA, GPU
     if args.GPU:
