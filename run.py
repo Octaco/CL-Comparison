@@ -237,11 +237,13 @@ def visualize(args, model, visualisation_set, first_time=True):
 
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs_query = {'input_ids': query_id, 'attention_mask': query_mask}
+        inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+        query = model(**inputs)[1]
 
         positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs_positive_code_key = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+        positive_code_key = model(**inputs)[1]
 
         # negative_keys
         sample_indices = list(range(len(visual_dataloader)))
@@ -251,18 +253,19 @@ def visualize(args, model, visualisation_set, first_time=True):
         subset = torch.utils.data.Subset(visualisation_set, sample_indices)
         data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
 
-        input_negative_keys = []
+        negative_keys = []
         for idx2, batch2 in enumerate(data_loader_subset):
             code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-            input_negative_keys.append(inputs)
+            negative_key = model(**inputs)[1]
+            negative_keys.append(negative_key.clone().detach())
 
-        query, positive_code_key, negative_keys = model(inputs_query, inputs_positive_code_key, input_negative_keys)
+        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
         all_embeddings.append((query, positive_code_key, negative_keys))
         visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
-                             negative_keys.detach().cpu().numpy(), first_time)
+                             negative_keys_reshaped.detach().cpu().numpy(), first_time)
 
 
 def train(args, model, optimizer, training_set, valid_set):
