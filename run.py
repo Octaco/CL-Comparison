@@ -72,7 +72,6 @@ class CustomDataset(TensorDataset):
         }
 
 
-
 def info_nce_loss(query, positive_key, negative_keys):
     return InfoNCE(negative_mode='unpaired')(query, positive_key, negative_keys)
 
@@ -82,24 +81,26 @@ def triplet_loss(query, positive_key, negative_key):
 
 
 def contrastive_loss(query, positive_key, negative_keys):
-    # Ensure all tensors have the same number of dimensions
-    max_dim = max(query.dim(), positive_key.dim(), max(nk.dim() for nk in negative_keys))
-    query = query.unsqueeze(0) if query.dim() < max_dim else query
-    positive_key = positive_key.unsqueeze(0) if positive_key.dim() < max_dim else positive_key
-    negative_keys = [nk.unsqueeze(0) if nk.dim() < max_dim else nk for nk in negative_keys]
+    # Prepare labels
+    negative_key = negative_keys[0]
+    positive_label = torch.ones(1)  # Positive label
+    negative_label = torch.zeros(1)  # Negative label
 
-    # Initialize the ContrastiveLoss function
-    loss_func = losses.ContrastiveLoss()
+    # Adjust dimension of query
+    # query = query.unsqueeze(0)
 
-    # Assuming query, positive_key, and negative_keys are all tensors of the same dimension
-    # Combine query, positive_key, and negative_keys into a single tensor
-    embeddings = torch.cat([query, positive_key] + negative_keys, dim=0)
+    # Adjust dimensions of positive and negative keys
+    # positive_key = positive_key.squeeze(0)
+    negative_key = negative_key.unsqueeze(0)
 
-    # Create labels: query and positive_key belong to the same class (e.g., 0), and each negative_key has a different class
-    labels = torch.tensor([0, 0] + list(range(1, 1 + len(negative_keys))))
+    # Concatenate positive and negative keys into one tensor
+    keys = torch.cat([positive_key, negative_key])
 
-    # Compute the loss
-    loss = loss_func(embeddings, labels)
+    # Prepare target tensor
+    target = torch.tensor([1, 0])
+    # Calculate loss
+    loss_func = torch.nn.CosineEmbeddingLoss()
+    loss = loss_func(query, keys, target)
 
     return loss
 
