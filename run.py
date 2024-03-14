@@ -546,7 +546,7 @@ def main():
     model.to(torch.device(args.device))
 
     # visualize
-    # visualize(args, model, visualization_set, True)
+    visualize(args, model, visualization_set, True)
 
     # train
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
@@ -555,7 +555,7 @@ def main():
     visualize_losses(train_losses, val_losses, args)
 
     # visualize again
-    # visualize(args, model, visualization_set, False)
+    visualize(args, model, visualization_set, False)
 
     # evaluate
     distances = evaluation(args, model, test_set)
