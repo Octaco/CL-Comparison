@@ -170,6 +170,7 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False):
 
 
 def visualize_losses(train_losses, val_losses, args):
+    plt.figure()
     plt.plot(train_losses, label='Training loss')
     plt.plot(val_losses, label='Validation loss')
     plt.title('Losses')
@@ -179,7 +180,7 @@ def visualize_losses(train_losses, val_losses, args):
     # save plot
     filepath = args.data_path + "/plots/losses.png"
     plt.savefig(filepath)
-    plt.show()
+    # plt.show()
 
 
 def visualize_embeddings(args, idx, query_embedding, positive_embedding, negative_embeddings, first_time):
