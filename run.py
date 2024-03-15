@@ -444,13 +444,12 @@ def evaluation(args, model, valid_set):
 
         negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
-        # calc Euclidean distance for positive key at first position
-        distances = [np.linalg.norm((query - positive_code_key).detach().cpu().numpy())]
+        # calc Cosine distance for positive key at first position
+        distances = [calculate_cosine_distance(query, positive_code_key)]
 
         for i in range(len(negative_keys_reshaped)):
             # calc Euclidean distance for negative keys
-            distance = np.linalg.norm((query - negative_keys_reshaped[i]).detach().cpu().numpy())
-
+            distance = calculate_cosine_distance(query, negative_keys_reshaped[i])
             distances.append(distance)
 
         logging.debug("distances: %s", distances)
@@ -458,6 +457,17 @@ def evaluation(args, model, valid_set):
 
     logging.info("***** finished evaluation *****")
     return all_distances
+
+
+def calculate_cosine_distance(positive_code_key, query):
+    # Remove the explicit dimension of size 1 and shift to cpu
+    positive_code_key = np.squeeze(positive_code_key.detach().cpu().numpy())
+    query = np.squeeze(query.detach().cpu().numpy())
+
+    cosine_similarity = (np.dot(query, positive_code_key) /
+                         (np.linalg.norm(query) * np.linalg.norm(positive_code_key)))
+    # Compute cosine distance
+    return 1 - cosine_similarity
 
 
 def main():
