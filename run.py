@@ -79,24 +79,26 @@ def triplet_loss(query, positive_key, negative_key):
     return torch.nn.TripletMarginLoss(margin=1.0, p=2)(query, positive_key, negative_key)
 
 
-def contrastive_loss(args, query, positive_key, negative_keys):
+def contrastive_loss(args, query, key, label):
     # Prepare labels
-    negative_key = negative_keys[0]
 
     query = query.to(args.device)
 
-    # Adjust dimensions of positive and negative keys
+    # Adjust dimensions of the key
 
-    negative_key = negative_key.unsqueeze(0)
+    key = key.squeeze().unsqueeze(0).to(args.device)
 
-    # Concatenate positive and negative keys into one tensor
-    keys = torch.cat([positive_key, negative_key]).to(args.device)
 
     # Prepare target tensor
-    target = torch.tensor([1, 0]).to(args.device)
+    if label == 1:
+        target = torch.tensor([1]).to(args.device)
+    elif label == -1:
+        target = torch.tensor([0]).to(args.device)
+    else:
+        raise ValueError('this should not happen')
     # Calculate loss
     loss_func = torch.nn.CosineEmbeddingLoss()
-    loss = loss_func(query, keys, target)
+    loss = loss_func(query, key, target)
 
     return loss
 
@@ -330,13 +332,17 @@ def train(args, model, optimizer, training_set, valid_set):
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
-                loss = contrastive_loss(args, query, positive_code_key, negative_keys_reshaped)
+                loss = contrastive_loss(args, query, positive_code_key, 1)
+                all_losses.append(loss.to("cpu").detach().numpy())
+                loss.backward(retain_graph=True)
+                loss = contrastive_loss(args, query, negative_keys_reshaped[0], -1)
+
             else:
                 exit("Loss function not supported")
             # print(loss)
+            all_losses.append(loss.to("cpu").detach().numpy())
             loss.backward()
 
-            all_losses.append(loss.to("cpu").detach().numpy())
 
             if (idx + 1) % args.num_of_accumulation_steps == 0:
                 # print("model updated")
@@ -390,8 +396,11 @@ def train(args, model, optimizer, training_set, valid_set):
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
                 loss = triplet_loss(query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
-                negative_key = negative_keys_reshaped[0].unsqueeze(0)
-                loss = contrastive_loss(args, query, positive_code_key, negative_key)
+                # compute loss for positive key
+                loss = contrastive_loss(args, query, positive_code_key, 1)
+                all_val_losses.append(loss.to("cpu").detach().numpy())
+                # compute loss for negative key
+                loss = contrastive_loss(args, query, negative_keys_reshaped[0], -1)
             else:
                 exit("Loss function not supported")
 
@@ -599,7 +608,7 @@ def main():
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
 
-    # write mrr to file
+
 
     # Calculate runtime duration in seconds
     end_time = time.time()
@@ -613,6 +622,7 @@ def main():
     print(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
     runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
 
+    # write mrr to file
     write_mrr_to_file(args, mrr, runtime)
 
 
