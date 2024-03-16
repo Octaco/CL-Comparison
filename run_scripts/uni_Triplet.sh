@@ -5,7 +5,7 @@ GPU=$1
 
 python3 ./run.py \
     --loss_function triplet \
-    --architecture SimCLR \
+    --architecture Uni \
     --data_path ./data \
     --lang ruby \
     --train_batch_size 16 \

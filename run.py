@@ -19,7 +19,7 @@ from tqdm import tqdm
 from models import UniEncoderModel, BiEncoderModel, MoCoModel
 
 LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
-ARCHITECTURES = ['SimCLR', 'SimSiam', 'MoCo']
+ARCHITECTURES = ['Uni', 'Bi', 'MoCo']
 
 
 class CustomDataset(TensorDataset):
@@ -131,9 +131,9 @@ def load_data(args):
 
 def model_call(args, model, model_input, is_code_key):
 
-    if args.architecture == "SimCLR":
+    if args.architecture == "Uni":
         output = model(**model_input)
-    elif args.architecture == "SimSiam":
+    elif args.architecture == "Bi":
         output = model(is_code_key, **model_input)
     elif args.architecture == "MoCo":
         output = model(is_code_key, **model_input)
@@ -503,7 +503,7 @@ def main():
     parser.add_argument("--loss_function", default="InfoNCE", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
-    parser.add_argument("--architecture", default="SimCLR", type=str, required=False,
+    parser.add_argument("--architecture", default="Uni", type=str, required=False,
                         help="Learning architecture selected in the list: " + ", ".join(ARCHITECTURES))
 
     parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
@@ -594,9 +594,9 @@ def main():
 
     # model
 
-    if args.architecture == 'SimCLR':
+    if args.architecture == 'Uni':
         model = UniEncoderModel(args.model_name)
-    elif args.architecture == 'SimSiam':
+    elif args.architecture == 'Bi':
         model = BiEncoderModel(args.model_name)
     elif args.architecture == 'MoCo':
         model = MoCoModel(args.model_name)
