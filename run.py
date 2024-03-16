@@ -562,7 +562,8 @@ def main():
     args.device = device
 
     # Setup logging
-    logging.basicConfig(filename=args.log_path + '/log_' + args.lang + '.txt',
+    filename = args.log_path + '/log_' + args.lang + '_' + args.architecture + '_' + args.loss_function + '.txt'
+    logging.basicConfig(filename=filename,
                         format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=args.log_level)
