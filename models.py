@@ -68,13 +68,13 @@ class MoCoModel(torch.nn.Module):
 
     def forward(self, input_ids, attention_mask):
         q = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
-        q = self.projection_head(q)
+        q = self.projection_head(q.pooler_output)
         q = torch.nn.functional.normalize(q, dim=1)
 
         with torch.no_grad():
             self._momentum_update()
             k = self.model_k(input_ids=input_ids, attention_mask=attention_mask)
-            k = self.projection_head(k)
+            k = self.projection_head(k.pooler_output)
             k = torch.nn.functional.normalize(k, dim=1)
 
         self._dequeue_and_enqueue(k)
