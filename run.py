@@ -140,7 +140,7 @@ def model_call(args, model, model_input, is_code_key):
     else:
         raise ValueError(f'Architecture {args.architecture} not supported')
 
-    return output[1]  # 1 for using pooled values (0 un-pooled values)
+    return output
 
 
 def set_seed(args):
