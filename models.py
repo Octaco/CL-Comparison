@@ -23,7 +23,7 @@ class BiEncoderModel(torch.nn.Module):
         self.model_q = UniEncoderModel(model_name)  # for the NL query
         self.model_k = UniEncoderModel(model_name)  # for the Code keys
         output_dim = self.model_k.get_hidden_size()
-        self.prediction_head = torch.nn.Linear(output_dim, output_dim)  # used with model_k
+        self.prediction_head = torch.nn.Linear(output_dim, output_dim)  # Linear layer for prediction head
 
     def forward(self, is_code_key, input_ids, attention_mask):
         if is_code_key:
@@ -31,8 +31,10 @@ class BiEncoderModel(torch.nn.Module):
             logits = self.prediction_head(output)
             return logits
         else:
-            output = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
+            with torch.no_grad():
+                output = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
             return output
+
 
 class MoCoModel(torch.nn.Module):
     def __init__(self, model_name, dim=768, k=4096, m=0.999):
