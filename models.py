@@ -10,6 +10,9 @@ class UniEncoderModel(torch.nn.Module):
     def get_hidden_size(self):
         return self.model.config.hidden_size
 
+    def get_parameter(self, **kwargs):
+        return self.model.parameters()
+
     def forward(self, input_ids, attention_mask):
         return self.model(input_ids=input_ids, attention_mask=attention_mask)[1]  # using pooled output
 
@@ -63,14 +66,14 @@ class MoCoModel(torch.nn.Module):
             param_k.data = param_k.data * self.m + param_q.data * (1. - self.m)
             param_k.requires_grad = False
 
-    def forward(self, is_code_key, input_ids, attention_mask):
-        q, _ = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
+    def forward(self, input_ids, attention_mask):
+        q = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
         q = self.projection_head(q)
         q = torch.nn.functional.normalize(q, dim=1)
 
         with torch.no_grad():
             self._momentum_update()
-            k, _ = self.model_k(input_ids=input_ids, attention_mask=attention_mask)
+            k = self.model_k(input_ids=input_ids, attention_mask=attention_mask)
             k = self.projection_head(k)
             k = torch.nn.functional.normalize(k, dim=1)
 

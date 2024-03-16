@@ -136,7 +136,7 @@ def model_call(args, model, model_input, is_code_key):
     elif args.architecture == "Bi":
         output = model(is_code_key, **model_input)
     elif args.architecture == "MoCo":
-        output = model(is_code_key, **model_input)
+        output = model(**model_input)
     else:
         raise ValueError(f'Architecture {args.architecture} not supported')
 
