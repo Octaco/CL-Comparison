@@ -129,6 +129,20 @@ def load_data(args):
     return train_df, test_df
 
 
+def model_call(args, model, model_input, is_code_key):
+
+    if args.architecture == "SimCLR":
+        output = model(**model_input)
+    elif args.architecture == "SimSiam":
+        output = model(is_code_key, **model_input)
+    elif args.architecture == "MoCo":
+        output = model(is_code_key, **model_input)
+    else:
+        raise ValueError(f'Architecture {args.architecture} not supported')
+
+    return output[1]  # 1 for using pooled values (0 un-pooled values)
+
+
 def set_seed(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -238,12 +252,12 @@ def visualize(args, model, visualisation_set, first_time=True):
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': query_id, 'attention_mask': query_mask}
-        query = model(**inputs)[1]
+        query = model_call(args, model, inputs, False)
 
         positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
-        positive_code_key = model(**inputs)[1]
+        positive_code_key = model_call(args, model, inputs, True)
 
         # negative_keys
         sample_indices = list(range(len(visual_dataloader)))
@@ -258,7 +272,7 @@ def visualize(args, model, visualisation_set, first_time=True):
             code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-            negative_key = model(**inputs)[1]
+            negative_key = model_call(args, model, inputs, True)
             negative_keys.append(negative_key.clone().detach())
 
         negative_keys_reshaped = torch.cat(negative_keys, dim=0)
@@ -292,7 +306,8 @@ def train(args, model, optimizer, training_set, valid_set):
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': query_id, 'attention_mask': query_mask}
-            query = model(**inputs)[1]  # using pooled values
+            query = model_call(args, model, inputs, False)
+            # query = model(**inputs)[1]  # using pooled values
             # query = model(**inputs)[0]  # using un-pooled values
             # print("query shape: ", query.shape)
 
@@ -311,17 +326,18 @@ def train(args, model, optimizer, training_set, valid_set):
 
             positive_code_key = code_list.pop(0)
             inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
-            positive_code_key = model(**inputs)[1]  # using pooled values
+            positive_code_key = model_call(args, model, inputs, True)
+            # positive_code_key = model(**inputs)[1]  # using pooled values
             # positive_code_key = model(**inputs)[0]  # using un-pooled values
 
             negative_keys = []
-
             for code, mask in code_list:
                 inputs = {'input_ids': code, 'attention_mask': mask}
 
-                negative_key = model(**inputs)[1]  # using pooled values
+                negative_code_key = model_call(args, model, inputs, True)
+                # negative_key = model(**inputs)[1]  # using pooled values
                 # negative_key = model(**inputs)[0]  # using un-pooled values
-                negative_keys.append(negative_key.clone().detach())
+                negative_keys.append(negative_code_key.clone().detach())
 
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
                                                dim=0)
@@ -354,9 +370,10 @@ def train(args, model, optimizer, training_set, valid_set):
         all_train_mean_losses.append(train_mean_loss)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
 
-        del train_dataloader
-
+        ########################################################
         # validation
+        ########################################################
+
         validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
         all_val_losses = []
         progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
@@ -369,7 +386,7 @@ def train(args, model, optimizer, training_set, valid_set):
             query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': query_id, 'attention_mask': query_mask}
-            query = model(**inputs)[1]
+            query = model_call(args, model, inputs, False)
 
             code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                           batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
@@ -377,15 +394,14 @@ def train(args, model, optimizer, training_set, valid_set):
 
             positive_code_key = code_list.pop(0)
             inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
-            positive_code_key = model(**inputs)[1]  # using pooled values
+            positive_code_key = model_call(args, model, inputs, True)
 
             negative_keys = []
-
             for code, mask in code_list:
                 inputs = {'input_ids': code, 'attention_mask': mask}
 
-                negative_key = model(**inputs)[1]  # using pooled values
-                negative_keys.append(negative_key.clone().detach())
+                negative_code_key = model_call(args, model, inputs, True)
+                negative_keys.append(negative_code_key.clone().detach())
 
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
                                                dim=0)
@@ -429,12 +445,12 @@ def evaluation(args, model, valid_set):
         query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': query_id, 'attention_mask': query_mask}
-        query = model(**inputs)[1]  # using pooled values
+        query = model_call(args, model, inputs, False)
 
         positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
         positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
-        positive_code_key = model(**inputs)[1]  # using pooled values
+        positive_code_key = model_call(args, model, inputs, True)
 
         # negative_keys
         sample_indices = list(range(len(eval_dataloader)))
@@ -449,8 +465,8 @@ def evaluation(args, model, valid_set):
             code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
             code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
             inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-            negative_key = model(**inputs)[1]
-            negative_keys.append(negative_key.clone().detach())
+            negative_code_key = model_call(args, model, inputs, True)
+            negative_keys.append(negative_code_key.clone().detach())
 
         negative_keys_reshaped = torch.cat(negative_keys, dim=0)
 
