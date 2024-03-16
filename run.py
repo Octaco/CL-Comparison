@@ -546,7 +546,9 @@ def main():
     args.MAX_LEN = 512
 
     # set minibatchsize to 2 for triplet and contrastive loss
+    # and macrobatchsize to (num_accumulation_steps * trainbatchsize) / 2
     if args.loss_function == "triplet" or args.loss_function == "ContrastiveLoss":
+        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.train_batch_size) / 2
         args.train_batch_size = 2
         args.eval_batch_size = 2
 
