@@ -671,19 +671,19 @@ def main():
     model.to(torch.device(args.device))
 
     # visualize
-    visualize(args, model, visualization_set, True)
+    # visualize(args, model, visualization_set, True)
 
     # train
-    train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
+    # train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
     # visualize train and val losses
-    visualize_losses(train_losses, val_losses, args)
+    # visualize_losses(train_losses, val_losses, args)
 
     # visualize again
-    visualize(args, model, visualization_set, False)
+    # visualize(args, model, visualization_set, False)
 
     # evaluate
-    distances = evaluation(args, model, test_set)
+    distances = predict_distances(args, model, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
