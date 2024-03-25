@@ -194,7 +194,7 @@ def visualize_losses(train_losses, val_losses, args):
     plt.ylabel('Loss')
     plt.legend()
     # save plot
-    filepath = args.data_path + "/plots/losses.png"
+    filepath = args.data_path + f"plots/{args.lang}/{args.architecture}_{args.loss_function}_losses.png"
     plt.savefig(filepath)
     # plt.show()
 
@@ -229,10 +229,11 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.ylabel('t-SNE Dimension 2')
 
     # Save plot
+    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_embeddings{idx}.png"
     if first_time:
-        filepath = args.data_path + f"plots/embeddings{idx}.png"
+        filepath = args.data_path + filename
     else:
-        filepath = args.data_path + f"plots/embeddings{idx}_after_training.png"
+        filepath = args.data_path + filename + "_after_training.png"
     plt.savefig(filepath)
     # plt.show()
 
