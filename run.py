@@ -1,6 +1,6 @@
 import argparse
 from sklearn.manifold import TSNE
-
+from sklearn.metrics.pairwise import cosine_distances
 import logging
 import random
 
@@ -547,14 +547,9 @@ def evaluation(args, model, valid_set):
 
 
 def calculate_cosine_distance(positive_code_key, query):
-    # Remove the explicit dimension of size 1 and shift to cpu
-    positive_code_key = np.squeeze(positive_code_key.detach().cpu().numpy())
-    query = np.squeeze(query.detach().cpu().numpy())
 
-    cosine_similarity = (np.dot(query, positive_code_key) /
-                         (np.linalg.norm(query) * np.linalg.norm(positive_code_key)))
     # Compute cosine distance
-    return 1 - cosine_similarity
+    return cosine_distances(positive_code_key, query)
 
 
 def main():
