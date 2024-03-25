@@ -604,7 +604,7 @@ def main():
     args = parser.parse_args()
     args.dataset = 'codebert-base'
     args.model_name = 'microsoft/codebert-base'
-    args.MAX_LEN = 512
+    args.MAX_LEN = 256
 
     # set minibatchsize to 2 for triplet and contrastive loss
     # and macrobatchsize to (num_accumulation_steps * trainbatchsize) / 2
