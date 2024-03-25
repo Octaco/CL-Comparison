@@ -16,5 +16,5 @@ python3 ./run.py \
     --data_path ./data/ \
     --log_level INFO \
     --num_of_accumulation_steps 16 \
-    --num_of_distractors 99 \
+    --num_of_distractors 999 \
     --GPU "$GPU"
