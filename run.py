@@ -93,7 +93,7 @@ def contrastive_loss(args, query, key, label):
     if label == 1:
         target = torch.tensor([1]).to(args.device)
     elif label == -1:
-        target = torch.tensor([0]).to(args.device)
+        target = torch.tensor([-1]).to(args.device)
     else:
         raise ValueError('this should not happen')
     # Calculate loss
