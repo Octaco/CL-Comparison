@@ -547,6 +547,8 @@ def evaluation(args, model, valid_set):
 
 
 def calculate_cosine_distance(positive_code_key, query):
+    print(positive_code_key.size())
+    print(query.size())
 
     # Compute cosine distance
     return cosine_distances(positive_code_key, query)
