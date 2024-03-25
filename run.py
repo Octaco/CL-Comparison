@@ -466,7 +466,7 @@ def predict_distances(args, model, test_set):
 
         # Sample Positive Code
         positive_code = code_embs[idx]
-        positive_code = np.expand_dims(positive_code, axis=0)
+
         # print("positive shape :", positive_code.shape)
 
         # calc Cosine distance for positive code
@@ -546,12 +546,10 @@ def evaluation(args, model, valid_set):
     return all_distances
 
 
-def calculate_cosine_distance(positive_code_key, query):
-    print(positive_code_key.size())
-    print(query.size())
+def calculate_cosine_distance(query, positive_code_key):
 
     # Compute cosine distance
-    return cosine_distances(positive_code_key, query)
+    return cosine_distances(query, positive_code_key)
 
 
 def main():
