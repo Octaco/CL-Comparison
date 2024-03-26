@@ -88,7 +88,6 @@ def contrastive_loss(args, query, key, label):
 
     key = key.squeeze().unsqueeze(0).to(args.device)
 
-
     # Prepare target tensor
     if label == 1:
         target = torch.tensor([1]).to(args.device)
@@ -129,8 +128,26 @@ def load_data(args):
     return train_df, test_df
 
 
-def model_call(args, model, model_input, is_code_key):
+def load_stat_code_search_dataset():
+    file = open(r"datasets\test_statcodesearch.jsonl", "r", encoding="utf8")
+    json_obj = pd.read_json(path_or_buf=file, lines=True)
+    # creating custom dataset from the list file containing 3000 words
+    function_code = []
+    function_documentation = []
+    for i in range(len(json_obj['input'])):
+        code = json_obj["input"][i].split("[CODESPLIT]")[0]
+        doc = json_obj["input"][i].split("[CODESPLIT]")[1]
+        function_code.append(str(code))
+        function_documentation.append(str(doc))
 
+    test_df = pd.DataFrame()
+    test_df['doc'] = function_documentation
+    test_df['code'] = function_code
+
+    return test_df
+
+
+def model_call(args, model, model_input, is_code_key):
     if args.architecture == "Uni":
         output = model(**model_input)
     elif args.architecture == "Bi":
@@ -163,7 +180,7 @@ def calculate_mrr_from_distances(distances_lists):
     return mean_mrr
 
 
-def write_mrr_to_file(args, mrr, runtime=" ", test=False):
+def write_mrr_to_file(args, mrr, runtime=" ", test=False, generalisation=False):
     mrr_path = args.data_path + "MRR.txt"
     with open(mrr_path, "r") as file:
         mrr_old = file.read()
@@ -171,17 +188,20 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False):
     with open(mrr_path, "w") as file:
         now = datetime.now().strftime("%d/%m/%Y%H:%M")
 
-        if test:
-            mrr_addition = "(test)"
-        else:
-            mrr_addition = ""
+        mrr_header = ""
 
-        mrr_addition += (
+        if test:
+            mrr_header += "(test)"
+
+        if generalisation:
+            mrr_header += "Generalisation:"
+
+        mrr_header += (
             f"{now}: {args.lang} {args.loss_function} {args.architecture}epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
             f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
             f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr}\n")
 
-        mrr_new = f"{mrr_old}{mrr_addition}"
+        mrr_new = f"{mrr_old}{mrr_header}"
         file.write(mrr_new)
 
 
@@ -360,7 +380,6 @@ def train(args, model, optimizer, training_set, valid_set):
             all_losses.append(loss.to("cpu").detach().numpy())
             loss.backward()
 
-
             if (idx + 1) % args.num_of_accumulation_steps == 0:
                 # print("model updated")
                 optimizer.step()
@@ -452,7 +471,6 @@ def predict_distances(args, model, test_set):
     code_embs = np.array(code_embs)
     # print(code_embs.shape)
 
-
     all_distances = []
     progress_bar = tqdm(eval_dataloader, desc="Compute Distances")
     for idx, batch in enumerate(progress_bar):
@@ -492,6 +510,7 @@ def predict_distances(args, model, test_set):
         all_distances.append(distances)
 
     return all_distances
+
 
 def evaluation(args, model, valid_set):
     logging.info("Evaluate ...")
@@ -548,7 +567,6 @@ def evaluation(args, model, valid_set):
 
 
 def calculate_cosine_distance(query, positive_code_key):
-
     # Compute cosine distance
     return cosine_distances(query, positive_code_key)
 
@@ -596,6 +614,7 @@ def main():
                                                                                                 "samples")
     parser.add_argument("--num_of_distractors", default=99, type=int, required=False, help="Number of distractors")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
+    parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
 
     args = parser.parse_args()
     args.dataset = 'codebert-base'
@@ -684,7 +703,16 @@ def main():
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
 
+    #####################
+    # test generalisation
+    #####################
+    generalisation_mrr = 0
+    if args.do_generalisation:
+        generalisation_df = load_stat_code_search_dataset()
 
+        distances = predict_distances(args, model, generalisation_df)
+
+        generalisation_mrr = calculate_mrr_from_distances(distances)
 
     # Calculate runtime duration in seconds
     end_time = time.time()
@@ -700,6 +728,8 @@ def main():
 
     # write mrr to file
     write_mrr_to_file(args, mrr, runtime)
+    if args.do_generalisation:
+        write_mrr_to_file(args, generalisation_mrr, runtime, generalisation=True)
 
 
 if __name__ == '__main__':
