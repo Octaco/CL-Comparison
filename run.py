@@ -522,61 +522,6 @@ def predict_distances(args, model, test_set):
 
     return all_distances
 
-
-def evaluation(args, model, valid_set):
-    logging.info("Evaluate ...")
-    print("Evaluate ...")
-
-    batch_size = 1
-    eval_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
-
-    all_distances = []
-    progress_bar = tqdm(eval_dataloader, desc="Evaluation", position=3, leave=True, dynamic_ncols=True)
-    for idx, batch in enumerate(progress_bar):
-
-        query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-        query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs = {'input_ids': query_id, 'attention_mask': query_mask}
-        query = model_call(args, model, inputs, False)
-
-        positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-        positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
-        positive_code_key = model_call(args, model, inputs, True)
-
-        # negative_keys
-        sample_indices = list(range(len(eval_dataloader)))
-        sample_indices.remove(idx)
-        sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
-
-        subset = torch.utils.data.Subset(valid_set, sample_indices)
-        data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
-
-        negative_keys = []
-        for idx2, batch2 in enumerate(data_loader_subset):
-            code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-            code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-            negative_code_key = model_call(args, model, inputs, True)
-            negative_keys.append(negative_code_key.clone().detach())
-
-        negative_keys_reshaped = torch.cat(negative_keys, dim=0)
-
-        # calc Cosine distance for positive key at first position
-        distances = [calculate_cosine_distance(query, positive_code_key)]
-
-        for i in range(len(negative_keys_reshaped)):
-            # calc Euclidean distance for negative keys
-            distance = calculate_cosine_distance(query, negative_keys_reshaped[i])
-            distances.append(distance)
-
-        logging.debug("distances: %s", distances)
-        all_distances.append(distances)
-
-    logging.info("***** finished evaluation *****")
-    return all_distances
-
-
 def calculate_cosine_distance(query, positive_code_key):
     # Compute cosine distance
     return cosine_distances(query, positive_code_key)
