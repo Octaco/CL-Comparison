@@ -89,7 +89,7 @@ class MoCoModel(torch.nn.Module):
                     for i in range(2, len(logits)):
                         negative_keys = torch.einsum('ij, ik -> ij', negative_keys, logits[i])
 
-                return negative_keys
+                return negative_keys / len(logits)
 
         else:
             query = self.model_q(input_ids=input_ids, attention_mask=attention_mask)[1] # using pooled output
