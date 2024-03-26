@@ -4,7 +4,8 @@
 
 ### Custom ###
 
-data/*
+data/plots/*
+data/MRR.txt
 logging/*
 
 ### Linux ###
