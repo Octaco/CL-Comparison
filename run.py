@@ -203,6 +203,8 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False, generalisation=False):
 
 
 def visualize_losses(train_losses, val_losses, args):
+    logging.info("Visualize losses")
+
     plt.figure()
     plt.plot(train_losses, label='Training loss')
     plt.plot(val_losses, label='Validation loss')
@@ -302,7 +304,6 @@ def visualize(args, model, visualisation_set, first_time=True):
 
 def train(args, model, optimizer, training_set, valid_set):
     logging.info("Start training ...")
-    print("Start training ...")
     all_train_mean_losses = []
     all_val_mean_losses = []
     for epoch in tqdm(range(1, args.num_train_epochs + 1), desc="Epochs", dynamic_ncols=True, position=0, leave=True):
@@ -316,6 +317,8 @@ def train(args, model, optimizer, training_set, valid_set):
         progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch} Train", position=1, leave=True, dynamic_ncols=True)
         for idx, batch in enumerate(progress_bar):
 
+            logging.debug("____________________________________________________________")
+            logging.debug(f"idx: {idx}")
             if batch['code_ids'].size(0) < args.train_batch_size:
                 logging.debug("continue")
                 continue
@@ -329,7 +332,11 @@ def train(args, model, optimizer, training_set, valid_set):
             # query = model(**inputs)[0]  # using un-pooled values
             # print("query shape: ", query.shape)
 
-            logging.debug(f"idx: {idx}")
+            logging.debug(f"query_id: {query_id.shape}")
+            logging.debug(f"query_mask: {query_mask.shape}")
+            logging.debug(f"query shape model output: {query.shape}")
+            logging.debug("__Shapes for Code keys:___________")
+
             logging.debug(f"code_ids: {batch['code_ids'].shape}")
             logging.debug(f"code_ids_0: {batch['code_ids'][0].shape}")
 
@@ -360,6 +367,10 @@ def train(args, model, optimizer, training_set, valid_set):
             negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
                                                dim=0)
 
+            logging.debug("keys model output:")
+            logging.debug(f"positive key: {positive_code_key.shape}")
+            logging.debug(f"negative key0: {negative_keys[0].shape}, reshaped: {negative_keys_reshaped.shape}")
+
             if args.loss_function == 'InfoNCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
@@ -373,7 +384,7 @@ def train(args, model, optimizer, training_set, valid_set):
 
             else:
                 exit("Loss function not supported")
-            # print(loss)
+
             all_losses.append(loss.to("cpu").detach().numpy())
             loss.backward()
 
@@ -449,6 +460,7 @@ def train(args, model, optimizer, training_set, valid_set):
 
 
 def predict_distances(args, model, test_set):
+    logging.info("Start Evaluation...")
     batch_size = 1
     num_distractors = args.num_of_distractors
 
@@ -505,6 +517,8 @@ def predict_distances(args, model, test_set):
             distances.append(distance)
 
         all_distances.append(distances)
+
+        logging.info("finished Evaluation")
 
     return all_distances
 
@@ -705,11 +719,13 @@ def main():
     #####################
     generalisation_mrr = 0
     if args.do_generalisation:
+        logging.info("Start Generalisation...")
         generalisation_df = load_stat_code_search_dataset()
 
         distances = predict_distances(args, model, generalisation_df)
 
         generalisation_mrr = calculate_mrr_from_distances(distances)
+        logging.info(f"Generalisation MRR: {generalisation_mrr}")
 
     # Calculate runtime duration in seconds
     end_time = time.time()
@@ -719,9 +735,9 @@ def main():
     hours, remainder = divmod(runtime_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
-    # Print or log the runtime
-    print(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
+    #  log the runtime
     runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
+    logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
     # write mrr to file
     write_mrr_to_file(args, mrr, runtime)
