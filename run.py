@@ -130,15 +130,17 @@ def load_data(args):
     return train_df, test_df
 
 
-def load_stat_code_search_dataset():
-    file = open(r"datasets\test_statcodesearch.jsonl", "r", encoding="utf8")
+def load_stat_code_search_dataset(args):
+    dataset_path = args.data_path + "datasets/test_statcodesearch.jsonl"
+
+    file = open(dataset_path, "r", encoding="utf8")
     json_obj = pd.read_json(path_or_buf=file, lines=True)
     # creating custom dataset from the list file containing 3000 words
     function_code = []
     function_documentation = []
     for i in range(len(json_obj['input'])):
-        code = json_obj["input"][i].split("[CODESPLIT]")[0]
-        doc = json_obj["input"][i].split("[CODESPLIT]")[1]
+        code = json_obj["input"][i].split("[CODESPLIT]")[1]
+        doc = json_obj["input"][i].split("[CODESPLIT]")[0]
         function_code.append(str(code))
         function_documentation.append(str(doc))
 
@@ -666,9 +668,10 @@ def main():
     generalisation_mrr = 0
     if args.do_generalisation:
         logging.info("Start Generalisation...")
-        generalisation_df = load_stat_code_search_dataset()
+        generalisation_df = load_stat_code_search_dataset(args)
 
-        distances = predict_distances(args, model, generalisation_df)
+        generalisation_set = CustomDataset(generalisation_df, args)
+        distances = predict_distances(args, model, generalisation_set)
 
         generalisation_mrr = calculate_mrr_from_distances(distances)
         logging.info(f"Generalisation MRR: {generalisation_mrr}")
