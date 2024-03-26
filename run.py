@@ -184,7 +184,7 @@ def calculate_mrr_from_distances(distances_lists):
     return mean_mrr
 
 
-def write_mrr_to_file(args, mrr, runtime=" ", test=False, generalisation=False):
+def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisation=False):
     mrr_path = args.data_path + "MRR.txt"
     with open(mrr_path, "r") as file:
         mrr_old = file.read()
@@ -203,7 +203,7 @@ def write_mrr_to_file(args, mrr, runtime=" ", test=False, generalisation=False):
         mrr_header += (
             f"{now}: {args.lang} {args.loss_function} {args.architecture}epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
             f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
-            f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr}\n")
+            f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr} general_MRR: {gen_mrr}\n")
 
         mrr_new = f"{mrr_old}{mrr_header}"
         file.write(mrr_new)
@@ -689,9 +689,7 @@ def main():
     logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
     # write mrr to file
-    write_mrr_to_file(args, mrr, runtime)
-    if args.do_generalisation:
-        write_mrr_to_file(args, generalisation_mrr, runtime, generalisation=True)
+    write_mrr_to_file(args, mrr, generalisation_mrr, runtime)
 
 
 if __name__ == '__main__':
