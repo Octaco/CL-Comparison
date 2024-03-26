@@ -525,7 +525,7 @@ def predict_distances(args, model, test_set):
 
         all_distances.append(distances)
 
-        logging.info("finished Evaluation")
+    logging.info("finished Evaluation")
 
     return all_distances
 
