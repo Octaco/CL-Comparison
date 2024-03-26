@@ -81,11 +81,8 @@ def triplet_loss(query, positive_key, negative_key):
 
 def contrastive_loss(args, query, key, label):
     # Prepare labels
-
     query = query.to(args.device)
-
     # Adjust dimensions of the key
-
     key = key.squeeze().unsqueeze(0).to(args.device)
 
     # Prepare target tensor
