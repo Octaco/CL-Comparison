@@ -99,6 +99,11 @@ def contrastive_loss(args, query, key, label):
     return loss
 
 
+def calculate_cosine_distance(query, positive_code_key):
+    # Compute cosine distance
+    return cosine_distances(query, positive_code_key)
+
+
 def load_data(args):
     code_search_dataset = load_dataset('code_search_net', args.lang)
 
@@ -521,10 +526,6 @@ def predict_distances(args, model, test_set):
         logging.info("finished Evaluation")
 
     return all_distances
-
-def calculate_cosine_distance(query, positive_code_key):
-    # Compute cosine distance
-    return cosine_distances(query, positive_code_key)
 
 
 def main():
