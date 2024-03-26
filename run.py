@@ -1,21 +1,21 @@
 import argparse
-from sklearn.manifold import TSNE
-from sklearn.metrics.pairwise import cosine_distances
-import logging
 import random
+import time
+from datetime import datetime
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader, TensorDataset
-from info_nce import InfoNCE
-from transformers import RobertaTokenizer
 from datasets import load_dataset
-import matplotlib.pyplot as plt
-
-from datetime import datetime
-import time
+from info_nce import InfoNCE
+from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_distances
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
+from transformers import RobertaTokenizer
+
+import logging
 from models import UniEncoderModel, BiEncoderModel, MoCoModel
 
 LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
