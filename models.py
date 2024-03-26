@@ -74,7 +74,7 @@ class MoCoModel(torch.nn.Module):
         if is_code_key:
             with torch.no_grad():
                 self._momentum_update()
-                k = self.model_k(input_ids=input_ids, attention_mask=attention_mask)[1]
+                k = self.model_k(input_ids=input_ids, attention_mask=attention_mask)[1] # using pooled output
                 logits = self._dequeue_and_enqueue(k)
 
                 if len(logits) == 1:
@@ -92,5 +92,5 @@ class MoCoModel(torch.nn.Module):
                 return negative_keys
 
         else:
-            query = self.model_q(input_ids=input_ids, attention_mask=attention_mask)[1]
+            query = self.model_q(input_ids=input_ids, attention_mask=attention_mask)[1] # using pooled output
             return query
