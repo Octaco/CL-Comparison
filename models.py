@@ -31,9 +31,9 @@ class BiEncoderModel(torch.nn.Module):
             # logits = self.prediction_head(output)
             return output
         else:  # no gradient for the queries
-            # with torch.no_grad():
-            output = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
-            return output
+            with torch.no_grad():
+                output = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
+                return output
 
 
 class MoCoModel(torch.nn.Module):
