@@ -242,16 +242,15 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     # Plot the embeddings
     plt.figure(figsize=(10, 8))
 
-    # Plot negative embeddings
-    for i in range(2, len(all_embeddings)):
-        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='red', label='Negative')
-
     # Plot query embedding
-    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query')
+    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2)
 
     # Plot positive embedding
-    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive')
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive', zorder=2)
 
+    # Plot negative embeddings
+    for i in range(2, len(all_embeddings)):
+        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='red', label='Negative', zorder=1)
 
     plt.legend(['Query', 'Positive', 'Negative'])
 
