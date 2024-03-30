@@ -632,7 +632,7 @@ def main():
     # Setup CUDA, GPU
     if args.GPU:
         import os
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.GPU)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
