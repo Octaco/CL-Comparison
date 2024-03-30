@@ -259,9 +259,9 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.ylabel('t-SNE Dimension 2')
 
     # Save plot
-    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_embeddings{idx}.png"
+    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_embeddings{idx}"
     if first_time:
-        filepath = args.data_path + filename
+        filepath = args.data_path + filename + ".png"
     else:
         filepath = args.data_path + filename + "_after_training.png"
     plt.savefig(filepath)
