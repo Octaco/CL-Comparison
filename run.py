@@ -151,14 +151,14 @@ def load_stat_code_search_dataset(args):
     return test_df
 
 
-def model_call(args, model, model_input, is_code_key):
+def model_call(args, model, model_input, is_code_key, visualization=False):
     if args.architecture == "Uni":
         output = model(**model_input)
     elif args.architecture == "Bi":
         output = model(is_code_key, **model_input)
     elif args.architecture == "MoCo":
         if is_code_key:
-            positive_key, negative_keys = model(is_code_key, **model_input)
+            positive_key, negative_keys = model(is_code_key, **model_input, visualization=visualization)
             return positive_key, negative_keys
         else:
             output = model(is_code_key, **model_input)
@@ -473,7 +473,7 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
         positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
 
-        positive_code_key, negative_code_keys = model_call(args, model, inputs, True)
+        positive_code_key, negative_code_keys = model_call(args, model, inputs, True, visualization=True)
 
         negative_code_keys_reshaped = torch.cat(negative_code_keys)
 
