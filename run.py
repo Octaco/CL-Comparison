@@ -268,11 +268,11 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     # plt.show()
 
 
-def visualize(args, model, visualisation_set, first_time=True):
+def visualize(args, model, visualization_set, first_time=True):
     logging.info("Visualize ...")
 
     batch_size = 1
-    visual_dataloader = DataLoader(visualisation_set, batch_size=batch_size, shuffle=False)
+    visual_dataloader = DataLoader(visualization_set, batch_size=batch_size, shuffle=False)
 
     for idx, batch in enumerate(visual_dataloader):
 
@@ -281,7 +281,7 @@ def visualize(args, model, visualisation_set, first_time=True):
 
         negative_keys_reshaped, positive_code_key, query = get_model_output_visualization(args, batch, batch_size, idx,
                                                                                           model, visual_dataloader,
-                                                                                          visualisation_set)
+                                                                                          visualization_set)
 
         visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
                              negative_keys_reshaped.detach().cpu().numpy(), first_time)
@@ -441,7 +441,7 @@ def predict_distances(args, model, test_set):
     return all_distances
 
 
-def get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualisation_set):
+def get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualization_set):
     # query
     query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -454,7 +454,7 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
     sample_indices = list(range(len(visual_dataloader)))
     sample_indices.remove(idx)
     sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
-    subset = torch.utils.data.Subset(visualisation_set, sample_indices)
+    subset = torch.utils.data.Subset(visualization_set, sample_indices)
     data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
     progress_bar = tqdm(data_loader_subset, desc="encode negatives", position=1, leave=True, dynamic_ncols=True)
 
@@ -660,8 +660,8 @@ def main():
     valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
     train_dataset = train_dataset.reset_index(drop=True)
     test_dataset = test_df.reset_index(drop=True)
-    visualisation_dataset = test_dataset.sample(args.num_of_distractors)
-    visualisation_dataset = visualisation_dataset.reset_index(drop=True)
+    visualization_dataset = test_dataset.sample(args.num_of_distractors)
+    visualization_dataset = visualization_dataset.reset_index(drop=True)
 
     logging.debug("TRAIN Dataset: %s", train_dataset.shape)
     logging.debug("VAL Dataset: %s", valid_dataset.shape)
@@ -670,7 +670,7 @@ def main():
     training_set = CustomDataset(train_dataset, args)
     test_set = CustomDataset(test_dataset, args)
     valid_set = CustomDataset(valid_dataset, args)
-    visualization_set = CustomDataset(visualisation_dataset, args)
+    visualization_set = CustomDataset(visualization_dataset, args)
 
     # model
 
