@@ -426,8 +426,9 @@ def predict_distances(args, model, test_set):
             # calculate distances
             distances = [calculate_cosine_distance(query, positive_code_key.detach().cpu().numpy())]
 
-            for key in negative_code_keys:
-                distance = calculate_cosine_distance(query, key)
+            for i in range(len(negative_code_keys)):
+                # calc cosine distance for negative keys
+                distance = calculate_cosine_distance(query, negative_code_keys[i])
                 distances.append(distance)
 
             all_distances.append(distances)
