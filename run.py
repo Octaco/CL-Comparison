@@ -739,7 +739,7 @@ def main():
 
     # visualize
     print("visualize embeddings__________")
-    visualize(args, model, visualization_set, True)
+    # visualize(args, model, visualization_set, True)
 
     # train
     print("train model____________________")
