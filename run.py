@@ -386,60 +386,111 @@ def predict_distances(args, model, test_set):
     device = args.device
     eval_dataloader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
-    # Compute code embeddings
-    code_embs = []
-    progress_bar = tqdm(eval_dataloader, desc="Create Code Embeddings")
-    for idx, batch in enumerate(progress_bar):
-        code_id = batch['code_ids'][0].to(torch.device(device)).unsqueeze(0)
-        code_mask = batch['code_mask'][0].to(torch.device(device)).unsqueeze(0)
-        inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-        code_emb = model_call(args, model, inputs, True)  # CodeBERT pooled
-        code_embs.append(code_emb.detach().cpu().numpy())
+    if args.architecture == "MoCo":
 
-    code_embs = np.array(code_embs)
-    # print(code_embs.shape)
+        progress_bar = tqdm(eval_dataloader, desc="Evaluation")
 
-    all_distances = []
-    progress_bar = tqdm(eval_dataloader, desc="Compute Distances")
-    for idx, batch in enumerate(progress_bar):
+        all_distances = []
+        for idx, batch in enumerate(progress_bar):
 
-        # Sample Query
-        query_id = batch['doc_ids'][0].to(torch.device(device)).unsqueeze(0)
-        query_mask = batch['doc_mask'][0].to(torch.device(device)).unsqueeze(0)
-        inputs = {'input_ids': query_id, 'attention_mask': query_mask}
-        query = model_call(args, model, inputs, False)  # CodeBERT pooled
-        query = query.detach().cpu().numpy()
-        # print("query shape :", query.shape)
+            # Sample Query
+            query_id = batch['doc_ids'][0].to(torch.device(device)).unsqueeze(0)
+            query_mask = batch['doc_mask'][0].to(torch.device(device)).unsqueeze(0)
+            inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+            query = model_call(args, model, inputs, False)  # CodeBERT pooled
+            query = query.detach().cpu().numpy()
 
-        # Sample Positive Code
-        positive_code = code_embs[idx]
+            if idx < 1:
+                # setup dataloader for negative_keys, first time
+                sample_indices = list(range(len(eval_dataloader)))
+                sample_indices.remove(idx)
+                sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
+                subset = torch.utils.data.Subset(test_set, sample_indices)
+                data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
 
-        # print("positive shape :", positive_code.shape)
+                # encode and add negative keys to queue
+                for idx2, batch2 in enumerate(data_loader_subset):
+                    code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+                    code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+                    inputs = {'input_ids': code_id, 'attention_mask': code_mask}
+                    model(True, **inputs)
 
-        # calc Cosine distance for positive code
-        distances = [calculate_cosine_distance(query, positive_code)]
+            # sample keys
+            positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
 
-        # Sample Negative Codes
-        sample_indices = list(range(len(code_embs)))
-        sample_indices.remove(idx)
-        sample_indices = random.choices(code_embs, k=min(num_distractors, len(sample_indices)))
+            positive_code_key, negative_code_keys = model_call(args, model, inputs, True, visualization=True)
 
-        negative_codes = []
-        for idx in range(len(sample_indices)):
-            negative_codes.append(code_embs[idx])
-        negative_codes = np.array(negative_codes)
-        # print("negatve shape :", negative_codes.shape)
+            negative_code_keys = np.array(negative_code_keys)
 
-        for i in range(len(negative_codes)):
-            # calc cosine distance for negative keys
-            distance = calculate_cosine_distance(query, negative_codes[i])
-            distances.append(distance)
+            # calculate distances
+            distances = [calculate_cosine_distance(query, positive_code_key)]
 
-        all_distances.append(distances)
+            for key in negative_code_keys:
+                distance = calculate_cosine_distance(query, key)
+                distances.append(distance)
 
-    logging.info("finished Evaluation")
+            all_distances.append(distances)
 
-    return all_distances
+        logging.info("finished Evaluation")
+        return all_distances
+
+    else:
+        # Compute code embeddings
+        code_embs = []
+        progress_bar = tqdm(eval_dataloader, desc="Create Code Embeddings")
+        for idx, batch in enumerate(progress_bar):
+            code_id = batch['code_ids'][0].to(torch.device(device)).unsqueeze(0)
+            code_mask = batch['code_mask'][0].to(torch.device(device)).unsqueeze(0)
+            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
+            code_emb = model_call(args, model, inputs, True)  # CodeBERT pooled
+            code_embs.append(code_emb.detach().cpu().numpy())
+
+        code_embs = np.array(code_embs)
+        # print(code_embs.shape)
+
+        all_distances = []
+        progress_bar = tqdm(eval_dataloader, desc="Compute Distances")
+        for idx, batch in enumerate(progress_bar):
+
+            # Sample Query
+            query_id = batch['doc_ids'][0].to(torch.device(device)).unsqueeze(0)
+            query_mask = batch['doc_mask'][0].to(torch.device(device)).unsqueeze(0)
+            inputs = {'input_ids': query_id, 'attention_mask': query_mask}
+            query = model_call(args, model, inputs, False)  # CodeBERT pooled
+            query = query.detach().cpu().numpy()
+            # print("query shape :", query.shape)
+
+            # Sample Positive Code
+            positive_code = code_embs[idx]
+
+            # print("positive shape :", positive_code.shape)
+
+            # calc Cosine distance for positive code
+            distances = [calculate_cosine_distance(query, positive_code)]
+
+            # Sample Negative Codes
+            sample_indices = list(range(len(code_embs)))
+            sample_indices.remove(idx)
+            sample_indices = random.choices(code_embs, k=min(num_distractors, len(sample_indices)))
+
+            negative_codes = []
+            for idx in range(len(sample_indices)):
+                negative_codes.append(code_embs[idx])
+            negative_codes = np.array(negative_codes)
+            # print("negatve shape :", negative_codes.shape)
+
+            for i in range(len(negative_codes)):
+                # calc cosine distance for negative keys
+                distance = calculate_cosine_distance(query, negative_codes[i])
+                distances.append(distance)
+
+            all_distances.append(distances)
+
+        logging.info("finished Evaluation")
+
+        return all_distances
 
 
 def get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualization_set):
