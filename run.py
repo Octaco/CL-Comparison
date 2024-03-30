@@ -738,18 +738,23 @@ def main():
     model.to(torch.device(args.device))
 
     # visualize
+    print("visualize embeddings__________")
     visualize(args, model, visualization_set, True)
 
     # train
+    print("train model____________________")
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
     # visualize train and val losses
+    print("visualize losses")
     visualize_losses(train_losses, val_losses, args)
 
     # visualize again
+    print("visualize embeddings___________")
     visualize(args, model, visualization_set, False)
 
     # evaluate
+    print("evaluate model_________________")
     distances = predict_distances(args, model, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
