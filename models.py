@@ -1,3 +1,5 @@
+import random
+
 import torch
 from transformers import RobertaModel
 
@@ -43,13 +45,15 @@ class MoCoModel(torch.nn.Module):
     m = momentum
     """
 
-    def __init__(self, model_name, dim=768, k=4096, m=0.999):
+    def __init__(self, args, k=4096):
         super(MoCoModel, self).__init__()
         self.k = k
-        self.m = m
-        self.model_q = RobertaModel.from_pretrained(model_name)
-        self.model_k = RobertaModel.from_pretrained(model_name)
-        self._momentum_update()
+        self.m = args.momentum
+        self.num_of_negative_samples = args.num_of_negative_samples
+        self.num_of_distractors = args.num_of_distractors
+        self.model_q = RobertaModel.from_pretrained(args.model_name)
+        self.model_k = RobertaModel.from_pretrained(args.model_name)
+
 
         # queue
         self.queue = []
@@ -62,35 +66,28 @@ class MoCoModel(torch.nn.Module):
             self.queue.pop(0)
             self.queue.append(keys)
 
-        return self.queue
-
     def _momentum_update(self):
         for param_q, param_k in zip(self.model_q.parameters(), self.model_k.parameters()):
             param_k.data = param_k.data * self.m + param_q.data * (1 - self.m)
             param_k.requires_grad = False
 
-    def forward(self, is_code_key, input_ids, attention_mask):
+    def forward(self, is_code_key, input_ids, attention_mask, visualisation=False):
 
         if is_code_key:
             with torch.no_grad():
                 self._momentum_update()
-                k = self.model_k(input_ids=input_ids, attention_mask=attention_mask)[1] # using pooled output
-                logits = self._dequeue_and_enqueue(k)
 
-                if len(logits) == 1:
-                    return logits[0]
+                positive_key = self.model_k(input_ids=input_ids, attention_mask=attention_mask)[1]  # using pooled output
 
-                # Multiply the tensors using torch.einsum
-                if len(logits) >= 2:
-                    negative_keys = torch.einsum('ij, ij -> ij', logits[0], logits[1])
+                if visualisation:
+                    negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_distractors))
+                else:
+                    negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_negative_samples))
 
-                if len(logits) >= 3:
-                    # Loop through the rest of the tensors in the list and multiply with the negative_keys
-                    for i in range(2, len(logits)):
-                        negative_keys = torch.einsum('ij, ik -> ij', negative_keys, logits[i])
+                self._dequeue_and_enqueue(positive_key)
 
-                return negative_keys / len(logits)
+                return positive_key, negative_keys
 
         else:
-            query = self.model_q(input_ids=input_ids, attention_mask=attention_mask)[1] # using pooled output
+            query = self.model_q(input_ids=input_ids, attention_mask=attention_mask)[1]  # using pooled output
             return query
