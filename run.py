@@ -270,15 +270,14 @@ def visualize(args, model, visualisation_set, first_time=True):
     batch_size = 1
     visual_dataloader = DataLoader(visualisation_set, batch_size=batch_size, shuffle=False)
 
-    all_embeddings = []
     for idx, batch in enumerate(visual_dataloader):
 
         if idx > 2:
             break
 
-        negative_keys, negative_keys_reshaped, positive_code_key, query \
-            = get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualisation_set)
-        all_embeddings.append((query, positive_code_key, negative_keys))
+        negative_keys_reshaped, positive_code_key, query = get_model_output_visualization(args, batch, batch_size, idx,
+                                                                                          model, visual_dataloader,
+                                                                                          visualisation_set)
 
         visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
                              negative_keys_reshaped.detach().cpu().numpy(), first_time)
@@ -439,20 +438,25 @@ def predict_distances(args, model, test_set):
 
 
 def get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualisation_set):
+    # query
     query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
     inputs = {'input_ids': query_id, 'attention_mask': query_mask}
     query = model_call(args, model, inputs, False)
+
+    # positive keys
     positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
     inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
     positive_code_key = model_call(args, model, inputs, True)
+
     # negative_keys
     sample_indices = list(range(len(visual_dataloader)))
     sample_indices.remove(idx)
     sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
     subset = torch.utils.data.Subset(visualisation_set, sample_indices)
     data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
+
     negative_keys = []
     for idx2, batch2 in enumerate(data_loader_subset):
         code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -460,8 +464,10 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
         inputs = {'input_ids': code_id, 'attention_mask': code_mask}
         negative_key = model_call(args, model, inputs, True)
         negative_keys.append(negative_key.clone().detach())
+
     negative_keys_reshaped = torch.cat(negative_keys, dim=0)
-    return negative_keys, negative_keys_reshaped, positive_code_key, query
+
+    return negative_keys_reshaped, positive_code_key, query
 
 
 def get_model_output_training(args, batch, model):
@@ -470,39 +476,41 @@ def get_model_output_training(args, batch, model):
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
     inputs = {'input_ids': query_id, 'attention_mask': query_mask}
     query = model_call(args, model, inputs, False)
-    # query = model(**inputs)[1]  # using pooled values
-    # query = model(**inputs)[0]  # using un-pooled values
-    # print("query shape: ", query.shape)
+
+    # Logging ***************
+
     logging.debug(f"query_id: {query_id.shape}")
     logging.debug(f"query_mask: {query_mask.shape}")
     logging.debug(f"query shape model output: {query.shape}")
     logging.debug("__Shapes for Code keys:___________")
     logging.debug(f"code_ids: {batch['code_ids'].shape}")
     logging.debug(f"code_ids_0: {batch['code_ids'][0].shape}")
-    logging.debug(f"mask: {batch['code_mask'].shape}")
-    logging.debug(f"mask_0: {batch['code_mask'][0].shape}")
+    logging.debug(f"code_mask: {batch['code_mask'].shape}")
+    logging.debug(f"code_mask_0: {batch['code_mask'][0].shape}")
+
+    # ***************
+
     code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                   batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
                  range(0, args.train_batch_size)]
-    # print("cl len: ",len(code_list))
+
+    # keys (codes)
     positive_code_key = code_list.pop(0)
     inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
     positive_code_key = model_call(args, model, inputs, True)
-    # positive_code_key = model(**inputs)[1]  # using pooled values
-    # positive_code_key = model(**inputs)[0]  # using un-pooled values
+
     negative_keys = []
     for code, mask in code_list:
         inputs = {'input_ids': code, 'attention_mask': mask}
-
         negative_code_key = model_call(args, model, inputs, True)
-        # negative_key = model(**inputs)[1]  # using pooled values
-        # negative_key = model(**inputs)[0]  # using un-pooled values
         negative_keys.append(negative_code_key.clone().detach())
-    negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))],
-                                       dim=0)
+
+    negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
+
     logging.debug("keys model output:")
     logging.debug(f"positive key: {positive_code_key.shape}")
     logging.debug(f"negative key0: {negative_keys[0].shape}, reshaped: {negative_keys_reshaped.shape}")
+
     return negative_keys_reshaped, positive_code_key, query
 
 
