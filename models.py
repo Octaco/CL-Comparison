@@ -71,7 +71,7 @@ class MoCoModel(torch.nn.Module):
             param_k.data = param_k.data * self.m + param_q.data * (1 - self.m)
             param_k.requires_grad = False
 
-    def forward(self, is_code_key, input_ids, attention_mask, visualisation=False):
+    def forward(self, is_code_key, input_ids, attention_mask, visualization=False):
 
         if is_code_key:
             with torch.no_grad():
@@ -79,7 +79,7 @@ class MoCoModel(torch.nn.Module):
 
                 positive_key = self.model_k(input_ids=input_ids, attention_mask=attention_mask)[1]  # using pooled output
 
-                if visualisation:
+                if visualization:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_distractors))
                 else:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_negative_samples))
