@@ -157,7 +157,11 @@ def model_call(args, model, model_input, is_code_key):
     elif args.architecture == "Bi":
         output = model(is_code_key, **model_input)
     elif args.architecture == "MoCo":
-        output = model(is_code_key, **model_input)
+        if is_code_key:
+            positive_key, negative_keys = model(is_code_key, **model_input)
+            return positive_key, negative_keys
+        else:
+            output = model(is_code_key, **model_input)
     else:
         raise ValueError(f'Architecture {args.architecture} not supported')
 
@@ -444,30 +448,58 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
     inputs = {'input_ids': query_id, 'attention_mask': query_mask}
     query = model_call(args, model, inputs, False)
 
-    # positive keys
-    positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-    positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-    inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
-    positive_code_key = model_call(args, model, inputs, True)
+    #keys
 
-    # negative_keys
+    # setup dataloader for negative_keys
     sample_indices = list(range(len(visual_dataloader)))
     sample_indices.remove(idx)
     sample_indices = random.choices(sample_indices, k=min(args.num_of_distractors, len(sample_indices)))
     subset = torch.utils.data.Subset(visualisation_set, sample_indices)
     data_loader_subset = DataLoader(subset, batch_size=batch_size, shuffle=True)
+    progress_bar = tqdm(data_loader_subset, desc="encode negatives", position=1, leave=True, dynamic_ncols=True)
 
-    negative_keys = []
-    for idx2, batch2 in enumerate(data_loader_subset):
-        code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
-        code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
-        inputs = {'input_ids': code_id, 'attention_mask': code_mask}
-        negative_key = model_call(args, model, inputs, True)
-        negative_keys.append(negative_key.clone().detach())
+    if args.architecture == "MoCo":
 
-    negative_keys_reshaped = torch.cat(negative_keys, dim=0)
+        # encode and add negative keys to queue
+        for idx2, batch2 in enumerate(progress_bar):
+            code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
+            model(True, **inputs)
 
-    return negative_keys_reshaped, positive_code_key, query
+        # retrieve keys
+        # positive key
+        positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+        positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+
+        positive_code_key, negative_code_keys = model_call(args, model, inputs, True)
+
+        negative_code_keys_reshaped = torch.cat(negative_code_keys)
+
+        return negative_code_keys_reshaped, positive_code_key, query
+
+
+    else:
+
+        # positive keys
+        positive_code_key_id = batch['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+        positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+        inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
+        positive_code_key = model_call(args, model, inputs, True)
+
+
+        negative_keys = []
+        for idx2, batch2 in enumerate(progress_bar):
+            code_id = batch2['code_ids'][0].to(torch.device(args.device)).unsqueeze(0)
+            code_mask = batch2['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
+            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
+            negative_key = model_call(args, model, inputs, True)
+            negative_keys.append(negative_key.clone().detach())
+
+        negative_keys_reshaped = torch.cat(negative_keys)
+
+        return negative_keys_reshaped, positive_code_key, query
 
 
 def get_model_output_training(args, batch, model):
@@ -494,24 +526,46 @@ def get_model_output_training(args, batch, model):
                   batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
                  range(0, args.train_batch_size)]
 
-    # keys (codes)
-    positive_code_key = code_list.pop(0)
-    inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
-    positive_code_key = model_call(args, model, inputs, True)
+    if args.architecture == "MoCo":
 
-    negative_keys = []
-    for code, mask in code_list:
-        inputs = {'input_ids': code, 'attention_mask': mask}
-        negative_code_key = model_call(args, model, inputs, True)
-        negative_keys.append(negative_code_key.clone().detach())
+        for i in range(1, len(code_list)):  # negatives
+            code_id = batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device))
+            code_mask = batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))
+            inputs = {'input_ids': code_id, 'attention_mask': code_mask}
 
-    negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
+            model(True, **inputs)  # encode negatives and add them to the queue
 
-    logging.debug("keys model output:")
-    logging.debug(f"positive key: {positive_code_key.shape}")
-    logging.debug(f"negative key0: {negative_keys[0].shape}, reshaped: {negative_keys_reshaped.shape}")
+        # positive key
+        code_id = batch['code_ids'][0].unsqueeze(0).to(torch.device(args.device))
+        code_mask = batch['code_mask'][0].unsqueeze(0).to(torch.device(args.device))
+        inputs = {'input_ids': code_id, 'attention_mask': code_mask}
 
-    return negative_keys_reshaped, positive_code_key, query
+        positive_code_key, negative_code_keys = model_call(args, model, inputs, True)
+
+        negative_code_keys_reshaped = torch.cat(negative_code_keys)
+
+        return negative_code_keys_reshaped, positive_code_key, query
+
+    else:
+
+        # keys (codes)
+        positive_code_key = code_list.pop(0)
+        inputs = {'input_ids': positive_code_key[0], 'attention_mask': positive_code_key[1]}
+        positive_code_key = model_call(args, model, inputs, True)
+
+        negative_keys = []
+        for code, mask in code_list:
+            inputs = {'input_ids': code, 'attention_mask': mask}
+            negative_code_key = model_call(args, model, inputs, True)
+            negative_keys.append(negative_code_key.clone().detach())
+
+        negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
+
+        logging.debug("keys model output:")
+        logging.debug(f"positive key: {positive_code_key.shape}")
+        logging.debug(f"negative key0: {negative_keys[0].shape}, reshaped: {negative_keys_reshaped.shape}")
+
+        return negative_keys_reshaped, positive_code_key, query
 
 
 def main():
@@ -543,6 +597,8 @@ def main():
 
     parser.add_argument("--num_train_epochs", default=5, type=int, required=False, help="Number of training epochs")
 
+    parser.add_argument("--momentum", default=0.999, required=False, help="Momentum parameter")
+
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
 
@@ -564,12 +620,14 @@ def main():
     args.model_name = 'microsoft/codebert-base'
     args.MAX_LEN = 256
 
-    # set minibatchsize to 2 for triplet and contrastive loss
-    # and macrobatchsize to (num_accumulation_steps * trainbatchsize) / 2
+    # set mini-batchsize to 2 for triplet and contrastive loss
+    # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
+    # and set num of negatives for triplet and ContrastiveLoss
     if args.loss_function == "triplet" or args.loss_function == "ContrastiveLoss":
         args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.train_batch_size) / 2
         args.train_batch_size = 2
         args.eval_batch_size = 2
+        args.num_of_negative_samples = 1
 
     # Setup CUDA, GPU
     if args.GPU:
@@ -602,7 +660,7 @@ def main():
     valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
     train_dataset = train_dataset.reset_index(drop=True)
     test_dataset = test_df.reset_index(drop=True)
-    visualisation_dataset = test_dataset.sample(99)
+    visualisation_dataset = test_dataset.sample(args.num_of_distractors)
     visualisation_dataset = visualisation_dataset.reset_index(drop=True)
 
     logging.debug("TRAIN Dataset: %s", train_dataset.shape)
@@ -621,7 +679,7 @@ def main():
     elif args.architecture == 'Bi':
         model = BiEncoderModel(args.model_name)
     elif args.architecture == 'MoCo':
-        model = MoCoModel(args.model_name)
+        model = MoCoModel(args)
     else:
         exit("Learning architecture not supported")
 
