@@ -740,19 +740,19 @@ def main():
 
     # visualize
     print("visualize embeddings__________")
-    # visualize(args, model, visualization_set, True)
+    visualize(args, model, visualization_set, True)
 
     # train
     print("train model____________________")
-    # train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
+    train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
     # visualize train and val losses
     print("visualize losses")
-    # visualize_losses(train_losses, val_losses, args)
+    visualize_losses(train_losses, val_losses, args)
 
     # visualize again
     print("visualize embeddings___________")
-    # visualize(args, model, visualization_set, False)
+    visualize(args, model, visualization_set, False)
 
     # evaluate
     print("evaluate model_________________")
