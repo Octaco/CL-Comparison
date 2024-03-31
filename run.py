@@ -747,7 +747,7 @@ def main():
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
     # visualize train and val losses
-    print("visualize losses")
+    print("visualize losses_______________")
     visualize_losses(train_losses, val_losses, args)
 
     # visualize again
