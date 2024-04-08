@@ -23,6 +23,10 @@ ARCHITECTURES = ['Uni', 'Bi', 'MoCo']
 
 
 class CustomDataset(TensorDataset):
+    """
+    Dataset for the project uses codebert-base Roberta Tokenizer
+    contains input IDs and attention masks for a NL description and its corresponding Code
+    """
 
     def __init__(self, dataframe, args):
         self.tokenizer = RobertaTokenizer.from_pretrained("microsoft/codebert-base")
@@ -151,7 +155,20 @@ def load_stat_code_search_dataset(args):
     return test_df
 
 
-def model_call(args, model, model_input, is_code_key, visualization=False):
+def model_call(args, model, model_input, is_code_key: bool, visualization: bool = False):
+    """
+    This is the function that does the actual model call.
+
+    For the Uni and Bi architecture if is_code_cey = True each positive and negative keys are requested separately but
+    for MoCo positive and negative Keys are returned at the same time.
+
+    :param args: The program arguments
+    :param model: The Model that is currently trained/evaluated
+    :param model_input: a dictionary with the input IDs at the first position and the Masks at the second position
+    :param is_code_key: True if its a code key or False if its a NL query
+    :param visualization: True if the program is currently visualizing data, False if not
+    :return: the Model output
+    """
     if args.architecture == "Uni":
         output = model(**model_input)
     elif args.architecture == "Bi":
@@ -177,6 +194,12 @@ def set_seed(args):
 
 
 def calculate_mrr_from_distances(distances_lists):
+    """
+    Calculate the Mean Reciprocal Rank (MRR) for a list of distances where the positive value is at the first index
+
+    :param distances_lists:
+    :return:
+    """
     ranks = []
     for batch_idx, predictions in enumerate(distances_lists):
         correct_score = predictions[0]
@@ -189,6 +212,16 @@ def calculate_mrr_from_distances(distances_lists):
 
 
 def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisation=False):
+    """
+    Custom MRR and hyperparameter logging
+
+    :param args:
+    :param mrr:
+    :param gen_mrr: generalization MRR
+    :param runtime:
+    :param test: True for personal test, False for actually running the program
+    :param generalisation: True when doing the Generaliation task (train on  Go/python/... and test on R)
+    """
     mrr_path = args.data_path + "MRR.txt"
     with open(mrr_path, "r") as file:
         mrr_old = file.read()
@@ -205,7 +238,7 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
             mrr_header += "Generalisation:"
 
         mrr_header += (
-            f"{now}: {args.lang} {args.loss_function} {args.architecture}epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
+            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
             f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
             f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr} general_MRR: {gen_mrr}\n")
 
@@ -214,6 +247,14 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
 
 
 def visualize_losses(train_losses, val_losses, args):
+    """
+    Visualize training and validation losses
+
+    :param train_losses:
+    :param val_losses:
+    :param args:
+    """
+
     logging.info("Visualize losses")
 
     plt.figure()
@@ -269,6 +310,16 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
 
 
 def visualize(args, model, visualization_set, first_time=True):
+    """
+    this methode plots the first three entrys in the visualisation dataset.
+
+
+    :param args:
+    :param model:
+    :param visualization_set:
+    :param first_time: specifys the name of the files the plots will be saved in
+    :return:
+    """
     logging.info("Visualize ...")
 
     batch_size = 1
@@ -288,6 +339,16 @@ def visualize(args, model, visualization_set, first_time=True):
 
 
 def train(args, model, optimizer, training_set, valid_set):
+    """
+    The training loop
+
+    :param args:
+    :param model:
+    :param optimizer:
+    :param training_set:
+    :param valid_set:
+    :return:
+    """
     logging.info("Start training ...")
     all_train_mean_losses = []
     all_val_mean_losses = []
@@ -378,6 +439,16 @@ def train(args, model, optimizer, training_set, valid_set):
 
 
 def predict_distances(args, model, test_set):
+    """
+    Evaluating the model after training on the evaluation set
+
+    2 Versions depending on the architecture. One for MoCo and the other one for Uni- and Bi-encoder setups
+
+    :param args:
+    :param model:
+    :param test_set:
+    :return:
+    """
     logging.info("Start Evaluation...")
     batch_size = 1
     num_distractors = args.num_of_distractors
@@ -494,13 +565,26 @@ def predict_distances(args, model, test_set):
 
 
 def get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualization_set):
+    """
+    2 Versions to retrieve positive and negative keys from the model for the visualization
+    One for MoCo and the other one for Uni- and Bi-encoder setups
+
+    :param args:
+    :param batch:
+    :param batch_size:
+    :param idx:
+    :param model:
+    :param visual_dataloader:
+    :param visualization_set:
+    :return:
+    """
     # query
     query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
     inputs = {'input_ids': query_id, 'attention_mask': query_mask}
     query = model_call(args, model, inputs, False)
 
-    #keys
+    # keys
 
     # setup dataloader for negative_keys
     sample_indices = list(range(len(visual_dataloader)))
@@ -531,7 +615,6 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
 
         return negative_code_keys_reshaped, positive_code_key, query
 
-
     else:
 
         # positive keys
@@ -539,7 +622,6 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
         positive_code_key_mask = batch['code_mask'][0].to(torch.device(args.device)).unsqueeze(0)
         inputs = {'input_ids': positive_code_key_id, 'attention_mask': positive_code_key_mask}
         positive_code_key = model_call(args, model, inputs, True)
-
 
         negative_keys = []
         for idx2, batch2 in enumerate(progress_bar):
@@ -555,6 +637,16 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
 
 
 def get_model_output_training(args, batch, model):
+    """
+    Two versions to retrieve output from the model for query and negative & positive examples
+    One for MoCo and the other one for Uni- and Bi-encoder setups
+
+    :param args:
+    :param batch:
+    :param model:
+    :return:
+    """
+
     # query = doc
     query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
@@ -627,7 +719,7 @@ def main():
     parser.add_argument("--loss_function", default="InfoNCE", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
-    parser.add_argument("--architecture", default="Uni", type=str, required=False,
+    parser.add_argument("--architecture", default="MoCo", type=str, required=False,
                         help="Learning architecture selected in the list: " + ", ".join(ARCHITECTURES))
 
     parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
@@ -726,7 +818,6 @@ def main():
     visualization_set = CustomDataset(visualization_dataset, args)
 
     # model
-
     if args.architecture == 'Uni':
         model = UniEncoderModel(args.model_name)
     elif args.architecture == 'Bi':
