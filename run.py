@@ -105,7 +105,7 @@ def calculate_cosine_distance(query, positive_code_key):
 
 
 def load_data(args):
-    code_search_dataset = load_dataset('code_search_net', args.lang)
+    code_search_dataset = load_dataset('code_search_net', args.lang, trust_remote_code=True)
 
     # train_data
     train_data = code_search_dataset['train']
