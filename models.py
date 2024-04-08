@@ -46,9 +46,9 @@ class MoCoModel(torch.nn.Module):
     m = momentum
     """
 
-    def __init__(self, args, k=4096):
+    def __init__(self, args):
         super(MoCoModel, self).__init__()
-        self.k = k
+        self.k = args.queue_length
         self.m = args.momentum
         self.num_of_negative_samples = args.num_of_negative_samples
         self.num_of_distractors = args.num_of_distractors
