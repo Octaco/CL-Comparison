@@ -16,6 +16,7 @@ from tqdm import tqdm
 from transformers import RobertaTokenizer
 
 import logging
+import wandb
 from models import UniEncoderModel, BiEncoderModel, MoCoModel
 
 LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
@@ -238,7 +239,7 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
             mrr_header += "Generalisation:"
 
         mrr_header += (
-            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.num_train_epochs} batch_size:{args.train_batch_size} "
+            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.num_train_epochs} batch_size:{args.batch_size} "
             f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
             f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr} general_MRR: {gen_mrr}\n")
 
@@ -356,7 +357,7 @@ def train(args, model, optimizer, training_set, valid_set):
         logging.info("training epoch %d", epoch)
 
         # random.shuffle(training_set)
-        train_dataloader = DataLoader(training_set, batch_size=args.train_batch_size, shuffle=True)
+        train_dataloader = DataLoader(training_set, batch_size=args.batch_size, shuffle=True)
 
         all_losses = []
 
@@ -365,7 +366,7 @@ def train(args, model, optimizer, training_set, valid_set):
 
             logging.debug("____________________________________________________________")
             logging.debug(f"idx: {idx}")
-            if batch['code_ids'].size(0) < args.train_batch_size:
+            if batch['code_ids'].size(0) < args.batch_size:
                 logging.debug("continue")
                 continue
 
@@ -398,16 +399,17 @@ def train(args, model, optimizer, training_set, valid_set):
         all_train_mean_losses.append(train_mean_loss)
         logging.info(f'Epoch {epoch} - Train-Loss: {train_mean_loss}')
 
+
         ########################################################
         # validation
         ########################################################
 
-        validation_dataloader = DataLoader(valid_set, batch_size=args.train_batch_size, shuffle=True)
+        validation_dataloader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=True)
         all_val_losses = []
         progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
                             dynamic_ncols=True)
         for idx, batch in enumerate(progress_bar):
-            if batch['code_ids'].size(0) < args.train_batch_size:
+            if batch['code_ids'].size(0) < args.batch_size:
                 logging.debug("continue")
                 continue
 
@@ -432,9 +434,12 @@ def train(args, model, optimizer, training_set, valid_set):
         all_val_mean_losses.append(val_mean_loss)
         logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
+        wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
+
         del validation_dataloader
 
     logging.info("Training finished")
+    wandb.log({"all_train_mean_loss": all_train_mean_losses, "all_val_mean_loss": all_val_mean_losses})
     return all_train_mean_losses, all_val_mean_losses
 
 
@@ -668,7 +673,7 @@ def get_model_output_training(args, batch, model):
 
     code_list = [(batch['code_ids'][i].unsqueeze(0).to(torch.device(args.device)),
                   batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))) for i in
-                 range(0, args.train_batch_size)]
+                 range(0, args.batch_size)]
 
     if args.architecture == "MoCo":
 
@@ -733,9 +738,7 @@ def main():
 
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
 
-    parser.add_argument("--train_batch_size", default=16, type=int, required=False, help="Training batch size")
-
-    parser.add_argument("--eval_batch_size", default=16, type=int, required=False, help="Evaluation batch size")
+    parser.add_argument("--batch_size", default=16, type=int, required=False, help="Training batch size")
 
     parser.add_argument("--learning_rate", default=1e-5, type=float, required=False, help="Learning rate")
 
@@ -769,9 +772,8 @@ def main():
     # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
     # and set num of negatives for triplet and ContrastiveLoss
     if args.loss_function == "triplet" or args.loss_function == "ContrastiveLoss":
-        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.train_batch_size) / 2
-        args.train_batch_size = 2
-        args.eval_batch_size = 2
+        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
+        args.batch_size = 2
         args.num_of_negative_samples = 1
 
     # Setup CUDA, GPU
@@ -794,6 +796,31 @@ def main():
 
     logging.debug("args: %s", args)
     print("loglevel: ", args.log_level)
+
+    # setup wandb
+
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="CL-Comparison",
+
+        # track hyperparameters and run metadata
+        config={
+            "method": "random",
+            "metric": {"goal": "maximize", "name": "MRR"},
+
+            "language": args.language,
+            "architecture": args.architecture,
+            "loss_function": args.loss_function,
+            "learning_rate": args.learning_rate,
+            "epochs": args.num_train_epochs,
+            "batch_size": args.batch_size,
+            "accumulation_steps": args.num_of_accumulation_steps,
+            "negative_samples": args.num_of_negative_samples,
+            "distractors": args.num_of_distractors,
+            "momentum": args.momentum,
+            "momentum_queue": args.queue_length
+        }
+    )
 
     # Set seed
     set_seed(args)
@@ -852,6 +879,7 @@ def main():
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
+    wandb.log({"mrr": mrr})
 
     #####################
     # test generalisation
@@ -866,6 +894,7 @@ def main():
 
         generalisation_mrr = calculate_mrr_from_distances(distances)
         logging.info(f"Generalisation MRR: {generalisation_mrr}")
+        wandb.log({"Generalisation_MRR": generalisation_mrr})
 
     # Calculate runtime duration in seconds
     end_time = time.time()
