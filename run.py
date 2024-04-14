@@ -53,7 +53,7 @@ def train(args, model, optimizer, training_set, valid_set):
             elif args.loss_function == 'ContrastiveLoss':
                 loss = contrastive_loss(args, query, positive_code_key, 1)
                 all_losses.append(loss.to("cpu").detach().numpy())
-                wandb.log({"train_loss": loss}, commit=False)
+                # wandb.log({"train_loss": loss}, commit=False)
                 loss.backward(retain_graph=True)
                 loss = contrastive_loss(args, query, negative_keys_reshaped[0], -1)
 
@@ -61,7 +61,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 exit("Loss function not supported")
 
             all_losses.append(loss.to("cpu").detach().numpy())
-            wandb.log({"train_loss": loss})
+            # wandb.log({"train_loss": loss})
             loss.backward()
 
             if (idx + 1) % args.num_of_accumulation_steps == 0:
@@ -98,11 +98,11 @@ def train(args, model, optimizer, training_set, valid_set):
             elif args.loss_function == 'ContrastiveLoss':
                 # compute loss for positive key
                 loss = contrastive_loss(args, query, positive_code_key, 1)
-                wandb.log({"val_loss": loss}, comit=False)
+                # wandb.log({"val_loss": loss}, comit=False)
                 all_val_losses.append(loss.to("cpu").detach().numpy())
                 # compute loss for negative key
                 loss = contrastive_loss(args, query, negative_keys_reshaped[0], -1)
-                wandb.log({"val_loss": loss})
+                # wandb.log({"val_loss": loss})
             else:
                 exit("Loss function not supported")
 
