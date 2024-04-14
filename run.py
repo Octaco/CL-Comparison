@@ -167,8 +167,6 @@ def predict_distances(args, model, test_set):
 
         # print("positive shape :", positive_code.shape)
 
-            # calc Cosine distance for positive code
-            distances = [calculate_cosine_distance(query, positive_code)]
         # calc Cosine distance for positive code
         distances = [calculate_cosine_distance(query, positive_code)]
 
