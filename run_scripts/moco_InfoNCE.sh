@@ -8,7 +8,7 @@ python3 ./run.py \
     --architecture MoCo \
     --data_path ./data \
     --lang ruby \
-    --atch_size 16 \
+    --batch_size 16 \
     --learning_rate 1e-5 \
     --num_train_epochs 5 \
     --train_size 0.8 \
