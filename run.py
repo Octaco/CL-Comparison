@@ -49,7 +49,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
-                loss = triplet_loss(query, positive_code_key, negative_key)
+                loss = triplet_loss(args, query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
                 loss = contrastive_loss(args, query, positive_code_key, 1)
                 all_losses.append(loss.to("cpu").detach().numpy())
@@ -92,7 +92,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
             elif args.loss_function == 'triplet':
                 negative_key = negative_keys_reshaped[0].unsqueeze(0)
-                loss = triplet_loss(query, positive_code_key, negative_key)
+                loss = triplet_loss(args, query, positive_code_key, negative_key)
             elif args.loss_function == 'ContrastiveLoss':
                 # compute loss for positive key
                 loss = contrastive_loss(args, query, positive_code_key, 1)
