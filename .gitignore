@@ -8,6 +8,8 @@ data/plots/*
 data/MRR.txt
 logging/*
 
+wandb
+
 ### Linux ###
 *~
 
