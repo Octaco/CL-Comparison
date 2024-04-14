@@ -58,21 +58,29 @@ class MoCoModel(torch.nn.Module):
 
         # queue
         self.queue = []
+        self.validation_queue = []
 
-    def _dequeue_and_enqueue(self, keys):
+    def _dequeue_and_enqueue(self, keys, use_validation_queue=False):
 
-        if len(self.queue) < self.k:
-            self.queue.append(keys)
+        if use_validation_queue:
+            if len(self.validation_queue) < self.k:
+                self.validation_queue.append(keys)
+            else:
+                self.validation_queue.pop(0)
+                self.validation_queue.append(keys)
         else:
-            self.queue.pop(0)
-            self.queue.append(keys)
+            if len(self.queue) < self.k:
+                self.queue.append(keys)
+            else:
+                self.queue.pop(0)
+                self.queue.append(keys)
 
     def _momentum_update(self):
         for param_q, param_k in zip(self.model_q.parameters(), self.model_k.parameters()):
             param_k.data = param_k.data * self.m + param_q.data * (1 - self.m)
             param_k.requires_grad = False
 
-    def forward(self, is_code_key, input_ids, attention_mask, visualization=False):
+    def forward(self, is_code_key, input_ids, attention_mask, visualization=False, validation=False):
 
         if is_code_key:
             with torch.no_grad():
@@ -82,6 +90,8 @@ class MoCoModel(torch.nn.Module):
 
                 if visualization:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_distractors))
+                elif validation:
+                    negative_keys = random.sample(self.validation_queue, min(len(self.queue), self.num_of_negative_samples))
                 else:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_negative_samples))
 

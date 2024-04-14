@@ -86,7 +86,7 @@ def train(args, model, optimizer, training_set, valid_set):
                 logging.debug("continue")
                 continue
 
-            negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model)
+            negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model, validation=True)
 
             if args.loss_function == 'InfoNCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)

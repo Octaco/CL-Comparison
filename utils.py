@@ -345,7 +345,7 @@ def compute_embeddings_visualization(args, batch, batch_size, idx, model, visual
         return negative_keys_reshaped, positive_code_key, query
 
 
-def compute_embeddings_train(args, batch, model):
+def compute_embeddings_train(args, batch, model, validation=False):
     """
     Two versions to retrieve output from the model for query and negative & positive examples
     One for MoCo and the other one for Uni- and Bi-encoder setups
@@ -353,6 +353,7 @@ def compute_embeddings_train(args, batch, model):
     :param args:
     :param batch:
     :param model:
+    :param validation:
     :return:
     """
 
@@ -393,7 +394,7 @@ def compute_embeddings_train(args, batch, model):
         code_mask = batch['code_mask'][0].unsqueeze(0).to(torch.device(args.device))
         inputs = {'input_ids': code_id, 'attention_mask': code_mask}
 
-        positive_code_key, negative_code_keys = model_call(args, model, inputs, True)
+        positive_code_key, negative_code_keys = model_call(args, model, inputs, True, validation=validation)
 
         negative_code_keys_reshaped = torch.cat(negative_code_keys)
 
@@ -421,7 +422,7 @@ def compute_embeddings_train(args, batch, model):
         return negative_keys_reshaped, positive_code_key, query
 
 
-def model_call(args, model, model_input, is_code_key: bool, visualization: bool = False):
+def model_call(args, model, model_input, is_code_key: bool, visualization: bool = False, validation: bool = False):
     """
     This is the function that does the actual model call.
 
@@ -433,6 +434,7 @@ def model_call(args, model, model_input, is_code_key: bool, visualization: bool 
     :param model_input: a dictionary with the input IDs at the first position and the Masks at the second position
     :param is_code_key: True if its a code key or False if its a NL query
     :param visualization: True if the program is currently visualizing data, False if not
+    :param validation: True if the program is currently validating, False if not
     :return: the Model output
     """
     if args.architecture == "Uni":
@@ -441,7 +443,7 @@ def model_call(args, model, model_input, is_code_key: bool, visualization: bool 
         output = model(is_code_key, **model_input)
     elif args.architecture == "MoCo":
         if is_code_key:
-            positive_key, negative_keys = model(is_code_key, **model_input, visualization=visualization)
+            positive_key, negative_keys = model(is_code_key, **model_input, visualization=visualization, validation=validation)
             return positive_key, negative_keys
         else:
             output = model(is_code_key, **model_input)
