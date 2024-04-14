@@ -249,11 +249,9 @@ def main():
         print("visualize embeddings__________")
         visualize(config, model, visualization_set, True)
 
-        with wandb.init():
-            config = wandb.config
-            # train
-            print("train model____________________")
-            train_losses, val_losses = train(config, model, optimizer, training_set, valid_set)
+        # train
+        print("train model____________________")
+        train_losses, val_losses = train(config, model, optimizer, training_set, valid_set)
 
         # visualize train and val losses
         print("visualize losses_______________")
