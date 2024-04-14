@@ -93,6 +93,7 @@ def load_data(args):
 
     return train_df, test_df
 
+
 def load_stat_code_search_dataset(args):
     dataset_path = args.data_path + "datasets/test_statcodesearch.jsonl"
 
@@ -178,8 +179,6 @@ def set_seed(args):
     torch.manual_seed(args.seed)
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
-
-
 
 
 def visualize_losses(train_losses, val_losses, args):
