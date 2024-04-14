@@ -107,12 +107,12 @@ def train(args, model, optimizer, training_set, valid_set):
         all_val_mean_losses.append(val_mean_loss)
         logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
-        wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
+        # wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
 
         del validation_dataloader
 
     logging.info("Training finished")
-    wandb.log({"all_train_mean_loss": all_train_mean_losses, "all_val_mean_loss": all_val_mean_losses})
+    # wandb.log({"all_train_mean_loss": all_train_mean_losses, "all_val_mean_loss": all_val_mean_losses})
     return all_train_mean_losses, all_val_mean_losses
 
 
@@ -331,7 +331,7 @@ def main():
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
-    wandb.log({"mrr": mrr})
+    # wandb.log({"mrr": mrr})
 
     #####################
     # test generalisation
