@@ -173,12 +173,12 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
         file.write(mrr_new)
 
 
-def set_seed(args):
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    if args.n_gpu > 0:
-        torch.cuda.manual_seed_all(args.seed)
+def set_seed(seed, n_gpu):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if n_gpu > 0:
+        torch.cuda.manual_seed_all(seed)
 
 
 def visualize_losses(train_losses, val_losses, args):

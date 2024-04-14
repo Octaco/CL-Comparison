@@ -8,7 +8,6 @@ from losses import triplet_loss, contrastive_loss, info_nce_loss
 from models import UniEncoderModel, BiEncoderModel, MoCoModel
 from utils import *
 
-
 LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
 ARCHITECTURES = ['Uni', 'Bi', 'MoCo']
 
@@ -86,7 +85,8 @@ def train(args, model, optimizer, training_set, valid_set):
                 logging.debug("continue")
                 continue
 
-            negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model, validation=True)
+            negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model,
+                                                                                        validation=True)
 
             if args.loss_function == 'InfoNCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
@@ -107,7 +107,7 @@ def train(args, model, optimizer, training_set, valid_set):
         all_val_mean_losses.append(val_mean_loss)
         logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
-        # wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
+        wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
 
         del validation_dataloader
 
@@ -244,14 +244,6 @@ def main():
     args.model_name = 'microsoft/codebert-base'
     args.MAX_LEN = 256
 
-    # set mini-batchsize to 2 for triplet and contrastive loss
-    # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
-    # and set num of negatives for triplet and ContrastiveLoss
-    if args.loss_function == "triplet" or args.loss_function == "ContrastiveLoss":
-        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
-        args.batch_size = 2
-        args.num_of_negative_samples = 1
-
     # Setup CUDA, GPU
     if args.GPU:
         import os
@@ -260,6 +252,113 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
     args.device = device
+
+    # setup wandb
+
+    wandb.login()
+
+    sweep_config = {
+        'method': 'grid',
+        'metric': {
+            'name': 'val_loss',
+            'goal': 'minimize'
+        }
+    }
+
+    parameters_dict = {
+        'language': {
+            'value': [args.lang]
+        },
+        'architecture': {
+            'value': [args.architecture]
+        },
+        'loss_function': {
+            'value': [args.loss_function]
+        },
+        'epochs': {
+            'values': [10, 20, 30]
+        },
+        'batch_size': {
+            'values': [16, 32, 64]
+        },
+        'num_of_accumulation_steps': {
+            'values': [8, 16]
+        },
+        'learning_rate': {
+            'values': [0.001, 0.0001, 0.00001]
+        },
+        'data_path': {
+            'value': args.data_path
+        },
+        'num_of_distractors': {
+            'value': args.num_of_distractors
+        },
+        'dataset': {
+            'value': args.dataset
+        },
+        'model_name': {
+            'value': args.model_name
+        },
+        'MAX_LEN': {
+            'value': args.MAX_LEN
+        },
+        'n_gpu': {
+            'value': args.n_gpu
+        },
+        'device': {
+            'value': str(args.device)
+        }
+    }
+    sweep_config['parameters'] = parameters_dict
+
+    args.num_of_negative_samples = args.batch_size - 1
+    if args.loss_function == 'triplet' or args.loss_function == 'ContrastiveLoss':
+        # set mini-batchsize to 2 for triplet and contrastive loss
+        # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
+        # and set num of negatives for triplet and ContrastiveLoss
+        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
+        args.batch_size = 2
+
+        # margin parameter
+        parameters_dict.update({
+            'margin': {
+                'values': [0.1, 0.3, 0.5]}
+        })
+
+        # update accumulation steps
+        parameters_dict.update({
+            'num_of_accumulation_steps': {
+                'value': args.num_of_accumulation_steps}
+        })
+
+        # update batch size
+        parameters_dict.update({
+            'batch_size': {
+                'value': args.batch_size}
+        })
+
+    if args.loss_function == 'InfoNCE':
+        parameters_dict.update({
+            'temperature': {
+                'values': [0.1, 0.5, 1.0]}
+        })
+
+    if args.architecture == 'MoCo':
+
+        parameters_dict.update({
+            'momentum': {
+                'values': [0.9, 0.95, 0.99]}
+        })
+
+        parameters_dict.update({
+            'queue_length': {
+                'values': [1024, 2048, 4096]}
+        })
+
+    sweep_id = wandb.sweep(sweep_config, project='Bachelor_Thesis')
+
+    wandb.agent(sweep_id, function=main, count=2)
+
 
     # Setup logging
     filename = args.log_path + '/log_' + args.lang + '_' + args.architecture + '_' + args.loss_function + '.txt'
@@ -273,12 +372,11 @@ def main():
     logging.debug("args: %s", args)
     print("loglevel: ", args.log_level)
 
-
     # Set seed
-    set_seed(args)
+    set_seed(args.seed, args.n_gpu)
 
     # set up data data
-    train_df, test_df = load_data(args)
+    train_df, test_df = load_data(wandb.config)
 
     train_dataset = train_df.sample(frac=args.train_size, random_state=200)
     valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
@@ -291,47 +389,47 @@ def main():
     logging.debug("VAL Dataset: %s", valid_dataset.shape)
     logging.debug("TEST Dataset: %s", test_dataset.shape)
 
-    training_set = CustomDataset(train_dataset, args)
-    test_set = CustomDataset(test_dataset, args)
-    valid_set = CustomDataset(valid_dataset, args)
-    visualization_set = CustomDataset(visualization_dataset, args)
+    training_set = CustomDataset(train_dataset, wandb.config)
+    test_set = CustomDataset(test_dataset, wandb.config)
+    valid_set = CustomDataset(valid_dataset, wandb.config)
+    visualization_set = CustomDataset(visualization_dataset, wandb.config)
 
     # model
     if args.architecture == 'Uni':
-        model = UniEncoderModel(args.model_name)
+        model = UniEncoderModel(wandb.config.model_name)
     elif args.architecture == 'Bi':
-        model = BiEncoderModel(args.model_name)
+        model = BiEncoderModel(wandb.config.model_name)
     elif args.architecture == 'MoCo':
-        model = MoCoModel(args)
+        model = MoCoModel(wandb.config)
     else:
         exit("Learning architecture not supported")
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
-    model.to(torch.device(args.device))
+    model.to(torch.device(wandb.config.device))
 
     # visualize
     print("visualize embeddings__________")
-    visualize(args, model, visualization_set, True)
+    visualize(wandb.config, model, visualization_set, True)
 
     # train
     print("train model____________________")
-    train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
+    train_losses, val_losses = train(wandb.config, model, optimizer, training_set, valid_set)
 
     # visualize train and val losses
     print("visualize losses_______________")
-    visualize_losses(train_losses, val_losses, args)
+    visualize_losses(train_losses, val_losses, wandb.config)
 
     # visualize again
     print("visualize embeddings___________")
-    visualize(args, model, visualization_set, False)
+    visualize(wandb.config, model, visualization_set, False)
 
     # evaluate
     print("evaluate model_________________")
-    distances = predict_distances(args, model, test_set)
+    distances = predict_distances(wandb.config, model, test_set)
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
-    # wandb.log({"mrr": mrr})
+    wandb.log({"mrr": mrr})
 
     #####################
     # test generalisation
@@ -361,7 +459,7 @@ def main():
     logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
     # write mrr to file
-    write_mrr_to_file(args, mrr, generalisation_mrr, runtime)
+    write_mrr_to_file(wandb.config, mrr, generalisation_mrr, runtime)
 
 
 if __name__ == '__main__':
