@@ -91,7 +91,7 @@ class MoCoModel(torch.nn.Module):
                 if visualization:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_distractors))
                 elif validation:
-                    negative_keys = random.sample(self.validation_queue, min(len(self.queue), self.num_of_negative_samples))
+                    negative_keys = random.sample(self.validation_queue, min(len(self.validation_queue), self.num_of_negative_samples))
                 else:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_negative_samples))
 
