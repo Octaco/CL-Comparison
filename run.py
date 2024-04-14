@@ -107,7 +107,7 @@ def train(args, model, optimizer, training_set, valid_set):
         all_val_mean_losses.append(val_mean_loss)
         logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
-        wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
+        wandb.log({"train_loss": train_mean_loss, "val_loss": val_mean_loss})
 
         del validation_dataloader
 
