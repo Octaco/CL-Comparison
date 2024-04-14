@@ -265,15 +265,15 @@ def visualize(args, model, visualization_set, first_time=True):
         if idx > 2:
             break
 
-        negative_keys_reshaped, positive_code_key, query = get_model_output_visualization(args, batch, batch_size, idx,
-                                                                                          model, visual_dataloader,
-                                                                                          visualization_set)
+        negative_keys_reshaped, positive_code_key, query = compute_embeddings_visualization(args, batch, batch_size, idx,
+                                                                                            model, visual_dataloader,
+                                                                                            visualization_set)
 
         visualize_embeddings(args, idx, query.detach().cpu().numpy(), positive_code_key.detach().cpu().numpy(),
                              negative_keys_reshaped.detach().cpu().numpy(), first_time)
 
 
-def get_model_output_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualization_set):
+def compute_embeddings_visualization(args, batch, batch_size, idx, model, visual_dataloader, visualization_set):
     """
     2 Versions to retrieve positive and negative keys from the model for the visualization
     One for MoCo and the other one for Uni- and Bi-encoder setups
@@ -345,7 +345,7 @@ def get_model_output_visualization(args, batch, batch_size, idx, model, visual_d
         return negative_keys_reshaped, positive_code_key, query
 
 
-def get_model_output_training(args, batch, model):
+def compute_embeddings_train(args, batch, model):
     """
     Two versions to retrieve output from the model for query and negative & positive examples
     One for MoCo and the other one for Uni- and Bi-encoder setups
