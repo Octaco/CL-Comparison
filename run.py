@@ -196,9 +196,12 @@ def predict_distances(args, model, test_set):
 def main():
     start_time = time.time()
 
-    with wandb.init():
+    with wandb.init() as run:
 
         config = wandb.config
+        sweep_name = config.architecture + '_' + config.loss_function
+
+        run.name = sweep_name
 
         # Setup logging
         filename = config.log_path + '/log_' + config.lang + '_' + config.architecture + '_' + config.loss_function + '.txt'
