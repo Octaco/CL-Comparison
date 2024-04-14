@@ -1,13 +1,11 @@
 import argparse
 import time
 
-import wandb
 from torch.utils.data import DataLoader
 
 from losses import triplet_loss, contrastive_loss, info_nce_loss
 from models import UniEncoderModel, BiEncoderModel, MoCoModel
 from utils import *
-
 
 LOSS_FUNCTIONS = ['triplet', 'InfoNCE', 'ContrastiveLoss']
 ARCHITECTURES = ['Uni', 'Bi', 'MoCo']
@@ -86,7 +84,8 @@ def train(args, model, optimizer, training_set, valid_set):
                 logging.debug("continue")
                 continue
 
-            negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model, validation=True)
+            negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model,
+                                                                                        validation=True)
 
             if args.loss_function == 'InfoNCE':
                 loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
@@ -107,12 +106,9 @@ def train(args, model, optimizer, training_set, valid_set):
         all_val_mean_losses.append(val_mean_loss)
         logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
-        wandb.log({"epoch": epoch, "train_loss": train_mean_loss, "val_loss": val_mean_loss})
-
         del validation_dataloader
 
     logging.info("Training finished")
-    wandb.log({"all_train_mean_loss": all_train_mean_losses, "all_val_mean_loss": all_val_mean_losses})
     return all_train_mean_losses, all_val_mean_losses
 
 
@@ -273,7 +269,6 @@ def main():
     logging.debug("args: %s", args)
     print("loglevel: ", args.log_level)
 
-
     # Set seed
     set_seed(args)
 
@@ -331,7 +326,6 @@ def main():
 
     mrr = calculate_mrr_from_distances(distances)
     logging.info(f"MRR: {mrr}")
-    wandb.log({"mrr": mrr})
 
     #####################
     # test generalisation
@@ -346,7 +340,6 @@ def main():
 
         generalisation_mrr = calculate_mrr_from_distances(distances)
         logging.info(f"Generalisation MRR: {generalisation_mrr}")
-        wandb.log({"Generalisation_MRR": generalisation_mrr})
 
     # Calculate runtime duration in seconds
     end_time = time.time()
