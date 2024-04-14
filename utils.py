@@ -358,6 +358,12 @@ def compute_embeddings_train(args, batch, model, validation=False):
     """
 
     # query = doc
+    if args.loss_function == 'InfoNCE':
+        num_of_negative_samples = args.batch_size - 1
+    else:
+        num_of_negative_samples = 1
+
+
     query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
     inputs = {'input_ids': query_id, 'attention_mask': query_mask}
@@ -413,7 +419,7 @@ def compute_embeddings_train(args, batch, model, validation=False):
             negative_code_key = model_call(args, model, inputs, True)
             negative_keys.append(negative_code_key.clone().detach())
 
-        negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
+        negative_keys_reshaped = torch.cat(negative_keys[:min(num_of_negative_samples, len(negative_keys))], dim=0)
 
         logging.debug("keys model output:")
         logging.debug(f"positive key: {positive_code_key.shape}")

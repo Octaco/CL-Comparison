@@ -26,7 +26,7 @@ def train(args, model, optimizer, training_set, valid_set):
     logging.info("Start training ...")
     all_train_mean_losses = []
     all_val_mean_losses = []
-    for epoch in tqdm(range(1, args.num_train_epochs + 1), desc="Epochs", dynamic_ncols=True, position=0, leave=True):
+    for epoch in tqdm(range(1, args.epochs + 1), desc="Epochs", dynamic_ncols=True, position=0, leave=True):
         logging.info("training epoch %d", epoch)
 
         # random.shuffle(training_set)
@@ -195,6 +195,114 @@ def predict_distances(args, model, test_set):
 
 def main():
     start_time = time.time()
+
+    with wandb.init():
+
+        config = wandb.config
+
+        # Setup logging
+        filename = config.log_path + '/log_' + config.lang + '_' + config.architecture + '_' + config.loss_function + '.txt'
+        logging.basicConfig(filename=filename,
+                            format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+                            datefmt='%m/%d/%Y %H:%M:%S',
+                            level=config.log_level)
+        logging.info("Device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
+                     config.device, config.n_gpu, config.lang, config.loss_function)
+        logging.debug("args: %s", config)
+        print("loglevel: ", config.log_level)
+        # Set seed
+        set_seed(config.seed, config.n_gpu)
+
+        # set up data data
+        train_df, test_df = load_data(wandb.config)
+
+        train_dataset = train_df.sample(frac=config.train_size, random_state=200)
+        valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
+        train_dataset = train_dataset.reset_index(drop=True)
+        test_dataset = test_df.reset_index(drop=True)
+        visualization_dataset = test_dataset.sample(config.num_of_distractors)
+        visualization_dataset = visualization_dataset.reset_index(drop=True)
+
+        logging.debug("TRAIN Dataset: %s", train_dataset.shape)
+        logging.debug("VAL Dataset: %s", valid_dataset.shape)
+        logging.debug("TEST Dataset: %s", test_dataset.shape)
+
+        training_set = CustomDataset(train_dataset, config)
+        test_set = CustomDataset(test_dataset, config)
+        valid_set = CustomDataset(valid_dataset, config)
+        visualization_set = CustomDataset(visualization_dataset, config)
+
+        # model
+        if config.architecture == 'Uni':
+            model = UniEncoderModel(config.model_name)
+        elif config.architecture == 'Bi':
+            model = BiEncoderModel(config.model_name)
+        elif config.architecture == 'MoCo':
+            model = MoCoModel(config)
+        else:
+            exit("Learning architecture not supported")
+
+        optimizer = torch.optim.Adam(params=model.parameters(), lr=config.learning_rate)
+        model.to(torch.device(config.device))
+
+        # visualize
+        print("visualize embeddings__________")
+        visualize(config, model, visualization_set, True)
+
+        with wandb.init():
+            config = wandb.config
+            # train
+            print("train model____________________")
+            train_losses, val_losses = train(config, model, optimizer, training_set, valid_set)
+
+        # visualize train and val losses
+        print("visualize losses_______________")
+        visualize_losses(train_losses, val_losses, config)
+
+        # visualize again
+        print("visualize embeddings___________")
+        visualize(config, model, visualization_set, False)
+
+        # evaluate
+        print("evaluate model_________________")
+        distances = predict_distances(config, model, test_set)
+
+        mrr = calculate_mrr_from_distances(distances)
+        logging.info(f"MRR: {mrr}")
+        wandb.log({"mrr": mrr})
+
+        #####################
+        # test generalisation
+        #####################
+        generalisation_mrr = 0
+        if config.do_generalisation:
+            logging.info("Start Generalisation...")
+            generalisation_df = load_stat_code_search_dataset(config)
+
+            generalisation_set = CustomDataset(generalisation_df, config)
+            distances = predict_distances(config, model, generalisation_set)
+
+            generalisation_mrr = calculate_mrr_from_distances(distances)
+            logging.info(f"Generalisation MRR: {generalisation_mrr}")
+            wandb.log({"Generalisation_MRR": generalisation_mrr})
+
+        # Calculate runtime duration in seconds
+        end_time = time.time()
+        runtime_seconds = end_time - start_time
+
+        # Convert runtime duration to hours, minutes, and seconds
+        hours, remainder = divmod(runtime_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        #  log the runtime
+        runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
+        logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
+
+        # write mrr to file
+        write_mrr_to_file(config, mrr, generalisation_mrr, runtime)
+
+
+def setup():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--loss_function", default="InfoNCE", type=str, required=False,
@@ -202,61 +310,42 @@ def main():
 
     parser.add_argument("--architecture", default="MoCo", type=str, required=False,
                         help="Learning architecture selected in the list: " + ", ".join(ARCHITECTURES))
-
     parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
                         help="Pretrained tokenizer name or path if not the same as model_name")
-
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
-
     parser.add_argument("--log_path", default='./logging', type=str, required=False,
                         help="Path to log files")
-
     parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
-
     parser.add_argument("--batch_size", default=16, type=int, required=False, help="Training batch size")
-
     parser.add_argument("--learning_rate", default=1e-5, type=float, required=False, help="Learning rate")
-
     parser.add_argument("--num_train_epochs", default=5, type=int, required=False, help="Number of training epochs")
-
     parser.add_argument("--momentum", default=0.999, required=False, help="Momentum parameter")
-
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
-
     parser.add_argument("--data_path", default='./data/', type=str, required=False, help="Path to data folder")
-
     parser.add_argument('--log_level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='INFO')
-
     parser.add_argument("--num_of_accumulation_steps", default=16, type=int, required=False,
                         help="Number of accumulation steps")
-
     parser.add_argument("--num_of_negative_samples", default=15, type=int, required=False, help="Number of negative "
                                                                                                 "samples")
     parser.add_argument("--num_of_distractors", default=99, type=int, required=False, help="Number of distractors")
     parser.add_argument("--queue_length", default=4096, type=int, required=False, help="MoCo queue length")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
-
     args = parser.parse_args()
     args.dataset = 'codebert-base'
     args.model_name = 'microsoft/codebert-base'
     args.MAX_LEN = 256
-
     # Setup CUDA, GPU
     if args.GPU:
         import os
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.GPU)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
     args.device = device
-
     # setup wandb
-
     wandb.login()
-
     sweep_config = {
         'method': 'grid',
         'metric': {
@@ -264,16 +353,15 @@ def main():
             'goal': 'minimize'
         }
     }
-
     parameters_dict = {
         'language': {
-            'value': [args.lang]
+            'value': args.lang
         },
         'architecture': {
-            'value': [args.architecture]
+            'value': args.architecture
         },
         'loss_function': {
-            'value': [args.loss_function]
+            'value': args.loss_function
         },
         'epochs': {
             'values': [10, 20, 30]
@@ -307,6 +395,21 @@ def main():
         },
         'device': {
             'value': str(args.device)
+        },
+        'log_path': {
+            'value': args.log_path
+        },
+        'lang': {
+            'value': args.lang
+        },
+        'log_level': {
+            'value': args.log_level
+        },
+        'seed': {
+            'value': args.seed
+        },
+        'train_size': {
+            'value': args.train_size
         }
     }
     sweep_config['parameters'] = parameters_dict
@@ -315,7 +418,6 @@ def main():
     if args.loss_function == 'triplet' or args.loss_function == 'ContrastiveLoss':
         # set mini-batchsize to 2 for triplet and contrastive loss
         # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
-        # and set num of negatives for triplet and ContrastiveLoss
         args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
         args.batch_size = 2
 
@@ -342,9 +444,7 @@ def main():
             'temperature': {
                 'values': [0.1, 0.5, 1.0]}
         })
-
     if args.architecture == 'MoCo':
-
         parameters_dict.update({
             'momentum': {
                 'values': [0.9, 0.95, 0.99]}
@@ -354,113 +454,9 @@ def main():
             'queue_length': {
                 'values': [1024, 2048, 4096]}
         })
-
     sweep_id = wandb.sweep(sweep_config, project='Bachelor_Thesis')
-
     wandb.agent(sweep_id, function=main, count=2)
 
 
-    # Setup logging
-    filename = args.log_path + '/log_' + args.lang + '_' + args.architecture + '_' + args.loss_function + '.txt'
-    logging.basicConfig(filename=filename,
-                        format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                        datefmt='%m/%d/%Y %H:%M:%S',
-                        level=args.log_level)
-    logging.info("Device: %s, n_gpu: %s, language: %s, loss_formulation: %s",
-                 device, args.n_gpu, args.lang, args.loss_function)
-
-    logging.debug("args: %s", args)
-    print("loglevel: ", args.log_level)
-
-    # Set seed
-    set_seed(args.seed, args.n_gpu)
-
-    # set up data data
-    train_df, test_df = load_data(wandb.config)
-
-    train_dataset = train_df.sample(frac=args.train_size, random_state=200)
-    valid_dataset = train_df.drop(train_dataset.index).reset_index(drop=True)
-    train_dataset = train_dataset.reset_index(drop=True)
-    test_dataset = test_df.reset_index(drop=True)
-    visualization_dataset = test_dataset.sample(args.num_of_distractors)
-    visualization_dataset = visualization_dataset.reset_index(drop=True)
-
-    logging.debug("TRAIN Dataset: %s", train_dataset.shape)
-    logging.debug("VAL Dataset: %s", valid_dataset.shape)
-    logging.debug("TEST Dataset: %s", test_dataset.shape)
-
-    training_set = CustomDataset(train_dataset, wandb.config)
-    test_set = CustomDataset(test_dataset, wandb.config)
-    valid_set = CustomDataset(valid_dataset, wandb.config)
-    visualization_set = CustomDataset(visualization_dataset, wandb.config)
-
-    # model
-    if args.architecture == 'Uni':
-        model = UniEncoderModel(wandb.config.model_name)
-    elif args.architecture == 'Bi':
-        model = BiEncoderModel(wandb.config.model_name)
-    elif args.architecture == 'MoCo':
-        model = MoCoModel(wandb.config)
-    else:
-        exit("Learning architecture not supported")
-
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
-    model.to(torch.device(wandb.config.device))
-
-    # visualize
-    print("visualize embeddings__________")
-    visualize(wandb.config, model, visualization_set, True)
-
-    # train
-    print("train model____________________")
-    train_losses, val_losses = train(wandb.config, model, optimizer, training_set, valid_set)
-
-    # visualize train and val losses
-    print("visualize losses_______________")
-    visualize_losses(train_losses, val_losses, wandb.config)
-
-    # visualize again
-    print("visualize embeddings___________")
-    visualize(wandb.config, model, visualization_set, False)
-
-    # evaluate
-    print("evaluate model_________________")
-    distances = predict_distances(wandb.config, model, test_set)
-
-    mrr = calculate_mrr_from_distances(distances)
-    logging.info(f"MRR: {mrr}")
-    wandb.log({"mrr": mrr})
-
-    #####################
-    # test generalisation
-    #####################
-    generalisation_mrr = 0
-    if args.do_generalisation:
-        logging.info("Start Generalisation...")
-        generalisation_df = load_stat_code_search_dataset(args)
-
-        generalisation_set = CustomDataset(generalisation_df, args)
-        distances = predict_distances(args, model, generalisation_set)
-
-        generalisation_mrr = calculate_mrr_from_distances(distances)
-        logging.info(f"Generalisation MRR: {generalisation_mrr}")
-        wandb.log({"Generalisation_MRR": generalisation_mrr})
-
-    # Calculate runtime duration in seconds
-    end_time = time.time()
-    runtime_seconds = end_time - start_time
-
-    # Convert runtime duration to hours, minutes, and seconds
-    hours, remainder = divmod(runtime_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    #  log the runtime
-    runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
-    logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
-
-    # write mrr to file
-    write_mrr_to_file(wandb.config, mrr, generalisation_mrr, runtime)
-
-
 if __name__ == '__main__':
-    main()
+    setup()

@@ -50,10 +50,14 @@ class MoCoModel(torch.nn.Module):
         super(MoCoModel, self).__init__()
         self.k = args.queue_length
         self.m = args.momentum
-        self.num_of_negative_samples = args.num_of_negative_samples
         self.num_of_distractors = args.num_of_distractors
         self.model_q = RobertaModel.from_pretrained(args.model_name)
         self.model_k = RobertaModel.from_pretrained(args.model_name)
+
+        if args.loss_function == 'InfoNCE':
+            self.num_of_negative_samples = args.batch_size - 1
+        else:
+            self.num_of_negative_samples = 1
 
 
         # queue
