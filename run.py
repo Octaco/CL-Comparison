@@ -379,7 +379,7 @@ def setup():
             'values': [8, 16]
         },
         'learning_rate': {
-            'values': [1e-5, 1e-7]
+            'values': [1e-4,1e-5, 1e-6]
         },
         'data_path': {
             'value': args.data_path
