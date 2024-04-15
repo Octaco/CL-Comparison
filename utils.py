@@ -165,7 +165,7 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
             mrr_header += "Generalisation:"
 
         mrr_header += (
-            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.num_train_epochs} batch_size:{args.batch_size} "
+            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.epochs} batch_size:{args.batch_size} "
             f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
             f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr} general_MRR: {gen_mrr}\n")
 
