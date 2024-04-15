@@ -416,6 +416,9 @@ def setup():
         },
         'train_size': {
             'value': args.train_size
+        },
+        'do_generalisation': {
+            'value': args.do_generalisation
         }
     }
     sweep_config['parameters'] = parameters_dict
