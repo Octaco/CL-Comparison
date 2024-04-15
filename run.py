@@ -338,7 +338,7 @@ def setup():
     parser.add_argument("--queue_length", default=4096, type=int, required=False, help="MoCo queue length")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
-    parser.add_argument("--num_of_runs", default=2, type=int, required=False)
+    parser.add_argument("--num_of_runs", type=int, required=False)
     args = parser.parse_args()
     args.dataset = 'codebert-base'
     args.model_name = 'microsoft/codebert-base'
@@ -465,7 +465,11 @@ def setup():
                 'values': [1024, 2048, 4096]}
         })
     sweep_id = wandb.sweep(sweep_config, project='Bachelor_Thesis')
-    wandb.agent(sweep_id, function=main, count=args.num_of_runs)
+
+    if args.num_of_runs:
+        wandb.agent(sweep_id, function=main, count=args.num_of_runs)
+    else:
+        wandb.agent(sweep_id, function=main)
 
 
 if __name__ == '__main__':
