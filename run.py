@@ -253,28 +253,30 @@ def main():
         model.to(torch.device(config.device))
 
         # visualize
-        print("visualize embeddings__________")
-        visualize(config, model, visualization_set, True)
+        # print("visualize embeddings__________")
+        # visualize(config, model, visualization_set, True)
 
         # train
         print("train model____________________")
         train_losses, val_losses = train(config, model, optimizer, training_set, valid_set)
 
         # visualize train and val losses
-        print("visualize losses_______________")
-        visualize_losses(train_losses, val_losses, config)
+        # print("visualize losses_______________")
+        # visualize_losses(train_losses, val_losses, config)
 
         # visualize again
         print("visualize embeddings___________")
         visualize(config, model, visualization_set, False)
+        # print("visualize embeddings___________")
+        # visualize(config, model, visualization_set, False)
 
         # evaluate
-        print("evaluate model_________________")
-        distances = predict_distances(config, model, test_set)
+        # print("evaluate model_________________")
+        # distances = predict_distances(config, model, test_set)
 
-        mrr = calculate_mrr_from_distances(distances)
-        logging.info(f"MRR: {mrr}")
-        wandb.log({"mrr": mrr})
+        # mrr = calculate_mrr_from_distances(distances)
+        # logging.info(f"MRR: {mrr}")
+        # wandb.log({"mrr": mrr})
 
         #####################
         # test generalisation
