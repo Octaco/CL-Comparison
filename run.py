@@ -292,19 +292,19 @@ def main():
             wandb.log({"Generalisation_MRR": generalisation_mrr})
 
         # Calculate runtime duration in seconds
-        end_time = time.time()
-        runtime_seconds = end_time - start_time
+        # end_time = time.time()
+        # runtime_seconds = end_time - start_time
 
         # Convert runtime duration to hours, minutes, and seconds
-        hours, remainder = divmod(runtime_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
+        # hours, remainder = divmod(runtime_seconds, 3600)
+        # minutes, seconds = divmod(remainder, 60)
 
         #  log the runtime
-        runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
-        logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
+        # runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
+        # logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
         # write mrr to file
-        write_mrr_to_file(config, mrr, generalisation_mrr, runtime)
+        # write_mrr_to_file(config, mrr, generalisation_mrr, runtime)
 
 
 def setup():
