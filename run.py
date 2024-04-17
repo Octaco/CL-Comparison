@@ -265,8 +265,6 @@ def main():
         # visualize_losses(train_losses, val_losses, config)
 
         # visualize again
-        print("visualize embeddings___________")
-        visualize(config, model, visualization_set, False)
         # print("visualize embeddings___________")
         # visualize(config, model, visualization_set, False)
 
