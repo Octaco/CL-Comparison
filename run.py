@@ -376,7 +376,7 @@ def setup():
             'values': [16, 32, 64]
         },
         'num_of_accumulation_steps': {
-            'values':  16
+            'value':  16
         },
         'learning_rate': {
             'values': [1e-4, 1e-5, 1e-6]
