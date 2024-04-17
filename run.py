@@ -203,7 +203,7 @@ def main():
     with wandb.init() as run:
 
         config = wandb.config
-        sweep_name = config.architecture + '_' + config.loss_function
+        sweep_name = config.architecture + '_' + config.loss_function + '_' + config.lang
 
         run.name = sweep_name
 
