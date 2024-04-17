@@ -370,16 +370,16 @@ def setup():
             'value': args.loss_function
         },
         'epochs': {
-            'values': [10, 20, 30]
+            'value': 5
         },
         'batch_size': {
             'values': [16, 32, 64]
         },
         'num_of_accumulation_steps': {
-            'values': [8, 16]
+            'values':  16
         },
         'learning_rate': {
-            'values': [1e-4,1e-5, 1e-6]
+            'values': [1e-4, 1e-5, 1e-6]
         },
         'data_path': {
             'value': args.data_path
@@ -430,12 +430,6 @@ def setup():
         args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
         args.batch_size = 2
 
-        # margin parameter
-        parameters_dict.update({
-            'margin': {
-                'values': [0.1, 0.3, 0.5]}
-        })
-
         # update accumulation steps
         parameters_dict.update({
             'num_of_accumulation_steps': {
@@ -446,12 +440,6 @@ def setup():
         parameters_dict.update({
             'batch_size': {
                 'value': args.batch_size}
-        })
-
-    if args.loss_function == 'InfoNCE':
-        parameters_dict.update({
-            'temperature': {
-                'values': [0.1, 0.5, 1.0]}
         })
 
     if args.architecture == 'MoCo':
