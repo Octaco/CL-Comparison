@@ -7,7 +7,7 @@ def info_nce_loss(query, positive_key, negative_keys):
 
 
 def triplet_loss(args, query, positive_key, negative_key):
-    return torch.nn.TripletMarginLoss(margin=args.margin, p=2)(query, positive_key, negative_key)
+    return torch.nn.TripletMarginLoss()(query, positive_key, negative_key)
 
 
 def contrastive_loss(args, query, key, label):

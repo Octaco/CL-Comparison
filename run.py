@@ -253,28 +253,28 @@ def main():
         model.to(torch.device(config.device))
 
         # visualize
-        print("visualize embeddings__________")
-        visualize(config, model, visualization_set, True)
+        # print("visualize embeddings__________")
+        # visualize(config, model, visualization_set, True)
 
         # train
         print("train model____________________")
         train_losses, val_losses = train(config, model, optimizer, training_set, valid_set)
 
         # visualize train and val losses
-        print("visualize losses_______________")
-        visualize_losses(train_losses, val_losses, config)
+        # print("visualize losses_______________")
+        # visualize_losses(train_losses, val_losses, config)
 
         # visualize again
-        print("visualize embeddings___________")
-        visualize(config, model, visualization_set, False)
+        # print("visualize embeddings___________")
+        # visualize(config, model, visualization_set, False)
 
         # evaluate
-        print("evaluate model_________________")
-        distances = predict_distances(config, model, test_set)
+        # print("evaluate model_________________")
+        # distances = predict_distances(config, model, test_set)
 
-        mrr = calculate_mrr_from_distances(distances)
-        logging.info(f"MRR: {mrr}")
-        wandb.log({"mrr": mrr})
+        # mrr = calculate_mrr_from_distances(distances)
+        # logging.info(f"MRR: {mrr}")
+        # wandb.log({"mrr": mrr})
 
         #####################
         # test generalisation
@@ -292,19 +292,19 @@ def main():
             wandb.log({"Generalisation_MRR": generalisation_mrr})
 
         # Calculate runtime duration in seconds
-        end_time = time.time()
-        runtime_seconds = end_time - start_time
+        # end_time = time.time()
+        # runtime_seconds = end_time - start_time
 
         # Convert runtime duration to hours, minutes, and seconds
-        hours, remainder = divmod(runtime_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
+        # hours, remainder = divmod(runtime_seconds, 3600)
+        # minutes, seconds = divmod(remainder, 60)
 
         #  log the runtime
-        runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
-        logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
+        # runtime = f"{int(hours)}:{int(minutes)}:{int(seconds)}"
+        # logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
         # write mrr to file
-        write_mrr_to_file(config, mrr, generalisation_mrr, runtime)
+        # write_mrr_to_file(config, mrr, generalisation_mrr, runtime)
 
 
 def setup():
@@ -337,7 +337,7 @@ def setup():
     parser.add_argument("--num_of_distractors", default=99, type=int, required=False, help="Number of distractors")
     parser.add_argument("--queue_length", default=4096, type=int, required=False, help="MoCo queue length")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
-    parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
+    parser.add_argument("--do_generalisation", default=False, type=bool, required=False)
     parser.add_argument("--num_of_runs", type=int, required=False)
     args = parser.parse_args()
     args.dataset = 'codebert-base'
@@ -370,16 +370,16 @@ def setup():
             'value': args.loss_function
         },
         'epochs': {
-            'values': [10, 20, 30]
+            'value': 5
         },
         'batch_size': {
             'values': [16, 32, 64]
         },
         'num_of_accumulation_steps': {
-            'values': [8, 16]
+            'value':  16
         },
         'learning_rate': {
-            'values': [1e-4,1e-5, 1e-6]
+            'values': [1e-4, 1e-5, 1e-6]
         },
         'data_path': {
             'value': args.data_path
@@ -430,12 +430,6 @@ def setup():
         args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
         args.batch_size = 2
 
-        # margin parameter
-        parameters_dict.update({
-            'margin': {
-                'values': [0.1, 0.3, 0.5]}
-        })
-
         # update accumulation steps
         parameters_dict.update({
             'num_of_accumulation_steps': {
@@ -446,12 +440,6 @@ def setup():
         parameters_dict.update({
             'batch_size': {
                 'value': args.batch_size}
-        })
-
-    if args.loss_function == 'InfoNCE':
-        parameters_dict.update({
-            'temperature': {
-                'values': [0.1, 0.5, 1.0]}
         })
 
     if args.architecture == 'MoCo':
