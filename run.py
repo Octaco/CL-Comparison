@@ -373,7 +373,7 @@ def setup():
             'value': 5
         },
         'batch_size': {
-            'values': [16, 32, 64]
+            'values': [8, 16, 32]
         },
         'num_of_accumulation_steps': {
             'value':  16
@@ -427,19 +427,32 @@ def setup():
     if args.loss_function == 'triplet' or args.loss_function == 'ContrastiveLoss':
         # set mini-batchsize to 2 for triplet and contrastive loss
         # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
-        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
+        # args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
         args.batch_size = 2
-
+        args.num_of_accumulation_steps = [64, 128, 256]
         # update accumulation steps
         parameters_dict.update({
             'num_of_accumulation_steps': {
-                'value': args.num_of_accumulation_steps}
+                'values': args.num_of_accumulation_steps}
         })
 
         # update batch size
         parameters_dict.update({
             'batch_size': {
                 'value': args.batch_size}
+        })
+
+    else:  # InfoNCE
+        # update batch size
+        parameters_dict.update({
+            'batch_size': {
+                'values': [8, 16, 32]}
+        })
+
+        # update accumulation steps
+        parameters_dict.update({
+            'num_of_accumulation_steps': {
+                'value': 16}
         })
 
     if args.architecture == 'MoCo':
