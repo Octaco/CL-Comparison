@@ -405,9 +405,6 @@ def setup():
         'log_path': {
             'value': args.log_path
         },
-        'lang': {
-            'value': args.lang
-        },
         'log_level': {
             'value': args.log_level
         },
