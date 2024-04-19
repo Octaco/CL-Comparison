@@ -29,12 +29,11 @@ class BiEncoderModel(torch.nn.Module):
 
     def forward(self, is_code_key, input_ids, attention_mask):
         if is_code_key:
-            with torch.no_grad():
+            with torch.no_grad():  # no gradient for the keys
                 output = self.model_k(input_ids=input_ids, attention_mask=attention_mask)
                 # logits = self.prediction_head(output)
                 return output
-        else:  # no gradient for the queries
-            # with torch.no_grad():
+        else:
             output = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
             return output
 
