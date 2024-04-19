@@ -360,7 +360,7 @@ def setup():
         }
     }
     parameters_dict = {
-        'language': {
+        'lang': {
             'value': args.lang
         },
         'architecture': {
