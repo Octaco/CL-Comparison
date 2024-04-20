@@ -355,7 +355,7 @@ def setup():
     sweep_config = {
         'method': 'grid',
         'metric': {
-            'name': 'val_loss',
+            'name': 'val_mean_loss',
             'goal': 'minimize'
         }
     }
