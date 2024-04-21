@@ -80,7 +80,7 @@ def train(args, model, optimizer, training_set, valid_set):
 
         validation_dataloader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=True)
         all_val_losses = []
-        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
+        progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} val ", position=2, leave=True,
                             dynamic_ncols=True)
         for idx, batch in enumerate(progress_bar):
             if batch['code_ids'].size(0) < args.batch_size:
