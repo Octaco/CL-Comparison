@@ -4,8 +4,6 @@
 #SBATCH --output=./logging/testout.log
 #SBATCH --error=./logging/testerr.log
 
-sweep_id=$1
-
 source venv/bin/activate
 
-python ./run.py --sweep_id $sweep_id
+python ./run.py --sweep_id 27i51dfx
