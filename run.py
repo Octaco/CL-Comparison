@@ -339,6 +339,7 @@ def setup():
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=False, type=bool, required=False)
     parser.add_argument("--num_of_runs", type=int, required=False)
+    parser.add_argument("--sweep_id", type=str, required=False)
     args = parser.parse_args()
     args.dataset = 'codebert-base'
     args.model_name = 'microsoft/codebert-base'
@@ -466,6 +467,8 @@ def setup():
 
     if args.num_of_runs:
         wandb.agent(sweep_id, function=main, count=args.num_of_runs)
+    elif args.sweep_id:
+        wandb.agent(args.sweep_id, function=main)
     else:
         wandb.agent(sweep_id, function=main)
 
