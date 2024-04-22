@@ -6,4 +6,6 @@
 
 #source venv/bin/activate
 
-python ./run.py --sweep_id onename-org/Bachelor_Thesis/27i51dfx
+GPU=$1
+
+python ./run.py --sweep_id onename-org/Bachelor_Thesis/27i51dfx --GPU $GPU
