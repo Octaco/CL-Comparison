@@ -8,4 +8,4 @@ sweep_id=$1
 
 source venv/bin/activate
 
-python src/run.py --sweep_id $sweep_id
+python ./run.py --sweep_id $sweep_id
