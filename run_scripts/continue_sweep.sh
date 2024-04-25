@@ -4,8 +4,7 @@
 #SBATCH --output=./logging/testout.log
 #SBATCH --error=./logging/testerr.log
 
-#source venv/bin/activate
 
-GPU=$1
+source venv/bin/activate
 
-python ./run.py --sweep_id onename-org/Bachelor_Thesis/27i51dfx --GPU $GPU
+python ./run.py --sweep_id 298txif6
