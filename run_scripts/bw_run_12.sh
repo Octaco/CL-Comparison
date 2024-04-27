@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id hcah2or1
+python ./run.py --sweep_id m5xlso2b
