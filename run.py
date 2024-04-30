@@ -376,9 +376,6 @@ def setup():
         'batch_size': {
             'values': [8, 16, 32]
         },
-        'num_of_accumulation_steps': {
-            'value':  16
-        },
         'learning_rate': {
             'values': [1e-4, 1e-5, 1e-6]
         },
@@ -450,7 +447,7 @@ def setup():
         # update accumulation steps
         parameters_dict.update({
             'num_of_accumulation_steps': {
-                'value': 16}
+                'values': [8, 32]}
         })
 
     if args.architecture == 'MoCo':
