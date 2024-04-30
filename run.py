@@ -244,7 +244,6 @@ def main():
     # and macro-batchsize to (num_accumulation_steps * train-batchsize) / 2
     # and set num of negatives for triplet and ContrastiveLoss
     if args.loss_function == "triplet" or args.loss_function == "ContrastiveLoss":
-        args.num_of_accumulation_steps = (args.num_of_accumulation_steps * args.batch_size) / 2
         args.batch_size = 2
         args.num_of_negative_samples = 1
 
