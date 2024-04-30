@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id m5xlso2b
+python ./run.py --sweep_id m5xlso2b --num_of_runs 2

@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id p1hoblcn
+python ./run.py --sweep_id p1hoblcn --num_of_runs 2

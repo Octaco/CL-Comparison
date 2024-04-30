@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id 9cw6ya2m
+python ./run.py --sweep_id 9cw6ya2m --num_of_runs 2

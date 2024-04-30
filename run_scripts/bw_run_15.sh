@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id 4ptam2pa
+python ./run.py --sweep_id 4ptam2pa --num_of_runs 2

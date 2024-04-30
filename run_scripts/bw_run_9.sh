@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id ougbeu2g
+python ./run.py --sweep_id ougbeu2g --num_of_runs 2

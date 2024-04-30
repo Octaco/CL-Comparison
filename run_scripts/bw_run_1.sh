@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id bp4d2igb
+python ./run.py --sweep_id bp4d2igb --num_of_runs 2

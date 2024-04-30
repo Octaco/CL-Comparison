@@ -7,4 +7,4 @@
 
 source venv/bin/activate
 
-python ./run.py --sweep_id gfl09b4f
+python ./run.py --sweep_id gfl09b4f --num_of_runs 2
