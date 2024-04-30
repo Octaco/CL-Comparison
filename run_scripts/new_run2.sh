@@ -1,4 +1,4 @@
-new_run1.sh#!/bin/bash
+#!/bin/bash
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=leonard.remus@uni-ulm.de
 #SBATCH --output=./logging/testout.log
