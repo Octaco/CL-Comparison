@@ -8,13 +8,13 @@ source venv/bin/activate
 
 python3 ./run.py \
     --loss_function ContrastiveLoss \
-    --architecture Bi \
+    --architecture Uni \
     --data_path ./data \
-    --lang go \
+    --lang javascript \
     --batch_size 2 \
     --learning_rate 1e-5 \
     --num_train_epochs 5 \
     --data_path ./data/ \
     --log_level INFO \
-    --num_of_accumulation_steps 16 \
+    --num_of_accumulation_steps 64 \
     --num_of_distractors 999

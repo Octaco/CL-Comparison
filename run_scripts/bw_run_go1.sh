@@ -16,5 +16,5 @@ python3 ./run.py \
     --num_train_epochs 5 \
     --data_path ./data/ \
     --log_level INFO \
-    --num_of_accumulation_steps 16 \
+    --num_of_accumulation_steps 64 \
     --num_of_distractors 999

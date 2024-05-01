@@ -8,15 +8,13 @@ source venv/bin/activate
 
 python3 ./run.py \
     --loss_function InfoNCE \
-    --architecture MoCo \
+    --architecture Uni \
     --data_path ./data \
-    --lang go \
-    --batch_size 16 \
+    --lang java \
+    --batch_size 8 \
     --learning_rate 1e-5 \
     --num_train_epochs 5 \
     --data_path ./data/ \
     --log_level INFO \
-    --num_of_accumulation_steps 16 \
-    --num_of_distractors 999 \
-    --queue_length 1024 \
-    --momentum 0.999
+    --num_of_accumulation_steps 8 \
+    --num_of_distractors 999
