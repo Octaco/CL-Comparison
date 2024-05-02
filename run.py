@@ -216,7 +216,7 @@ def main():
 
     parser.add_argument("--num_train_epochs", default=5, type=int, required=False, help="Number of training epochs")
 
-    parser.add_argument("--momentum", default=0.999, required=False, help="Momentum parameter")
+    parser.add_argument("--momentum", default=0.999, type=float, required=False, help="Momentum parameter")
 
     parser.add_argument("--train_size", default=0.8, type=float, required=False, help="percentage of train dataset used"
                                                                                       "for training")
