@@ -19,4 +19,4 @@ python3 ./run.py \
     --num_of_accumulation_steps 32 \
     --num_of_distractors 999 \
     --queue_length 1024 \
-    --momentum 0.99
+    --momentum 0.9
