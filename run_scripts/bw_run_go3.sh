@@ -12,7 +12,7 @@ python3 ./run.py \
     --data_path ./data \
     --lang go \
     --batch_size 2 \
-    --learning_rate 1e-5 \
+    --learning_rate 1e-6 \
     --num_train_epochs 5 \
     --data_path ./data/ \
     --log_level INFO \
