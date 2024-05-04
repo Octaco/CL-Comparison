@@ -229,13 +229,10 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
         plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='red', label='Negative', zorder=1, marker='x')
 
     plt.legend(['Query', 'Positive', 'Negative'])
-
     plt.title('t-SNE Visualization of Embeddings')
-    plt.xlabel('t-SNE Dimension 1')
-    plt.ylabel('t-SNE Dimension 2')
 
     # Save plot
-    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_embeddings{idx}"
+    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_{args.lang}_{idx}"
     if first_time:
         filepath = args.data_path + filename + ".png"
     else:
