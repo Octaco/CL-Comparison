@@ -222,7 +222,7 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o')
 
     # Plot positive embedding
-    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive', zorder=2, marker='+')
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive', zorder=2, marker='o')
 
     # Plot negative embeddings
     for i in range(2, len(all_embeddings)):
