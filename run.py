@@ -361,7 +361,7 @@ def main():
     logging.info(f"Program runtime: {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds")
 
     # write mrr to file
-    write_mrr_to_file(args, mrr, generalisation_mrr, runtime)
+    write_mrr_to_file(args, mrr_before_train, mrr, generalisation_mrr, runtime)
 
 
 if __name__ == '__main__':

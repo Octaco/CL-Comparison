@@ -138,11 +138,12 @@ def calculate_mrr_from_distances(distances_lists):
     return mean_mrr
 
 
-def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisation=False):
+def write_mrr_to_file(args, mrr_before_train, mrr, gen_mrr, runtime=" ", test=False, generalisation=False):
     """
     Custom MRR and hyperparameter logging
 
     :param args:
+    :param mrr_before_train:
     :param mrr:
     :param gen_mrr: generalization MRR
     :param runtime:
@@ -165,9 +166,8 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
             mrr_header += "Generalisation:"
 
         mrr_header += (
-            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.num_train_epochs} batch_size:{args.batch_size} "
-            f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
-            f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr} general_MRR: {gen_mrr}\n")
+            f"{now}: {args.lang} {args.loss_function} {args.architecture} "
+            f"runtime:{runtime} MRR_before_train{mrr_before_train} MRR:{mrr} general_MRR: {gen_mrr}\n")
 
         mrr_new = f"{mrr_old}{mrr_header}"
         file.write(mrr_new)
