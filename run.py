@@ -307,6 +307,14 @@ def main():
     print("visualize embeddings__________")
     visualize(args, model, visualization_set, True)
 
+    # evaluate
+    print("evaluate model_________________")
+    distances = predict_distances(args, model, test_set)
+
+    mrr_before_train = calculate_mrr_from_distances(distances)
+    logging.info(f"MRR Before training: {mrr_before_train}")
+
+
     # train
     print("train model____________________")
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
