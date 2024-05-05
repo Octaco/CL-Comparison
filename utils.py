@@ -222,11 +222,11 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o')
 
     # Plot positive embedding
-    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive', zorder=2, marker='o')
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='red', label='Positive', zorder=3, marker='^')
 
     # Plot negative embeddings
     for i in range(2, len(all_embeddings)):
-        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='red', label='Negative', zorder=1, marker='x')
+        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='grey', label='Negative', zorder=1, marker='v')
 
     plt.legend(['Query', 'Positive', 'Negative'])
     plt.title('t-SNE Visualization of Embeddings')
