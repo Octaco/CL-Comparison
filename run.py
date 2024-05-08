@@ -237,6 +237,7 @@ def main():
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
     parser.add_argument("--do_validation", default=True, type=bool, required=False)
+    parser.add_argument("--do_visualization", default=False, type=bool, required=False)
 
     args = parser.parse_args()
     args.dataset = 'codebert-base'
@@ -307,8 +308,9 @@ def main():
     model.to(torch.device(args.device))
 
     # visualize
-    print("visualize embeddings__________")
-    visualize(args, model, visualization_set, True)
+    if args.do_visualization:
+        print("visualize embeddings__________")
+        visualize(args, model, visualization_set, True)
 
     # evaluate
     print("evaluate model_________________")
@@ -322,13 +324,14 @@ def main():
     print("train model____________________")
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
-    # visualize train and val losses
-    print("visualize losses_______________")
-    visualize_losses(train_losses, val_losses, args)
+    if args.do_visualization:
+        # visualize train and val losses
+        print("visualize losses_______________")
+        visualize_losses(train_losses, val_losses, args)
 
-    # visualize again
-    print("visualize embeddings___________")
-    visualize(args, model, visualization_set, False)
+        # visualize again
+        print("visualize embeddings___________")
+        visualize(args, model, visualization_set, False)
 
     # evaluate
     print("evaluate model_________________")
