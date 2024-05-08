@@ -384,7 +384,7 @@ def compute_embeddings_train(args, batch, model, validation=False):
             code_mask = batch['code_mask'][i].unsqueeze(0).to(torch.device(args.device))
             inputs = {'input_ids': code_id, 'attention_mask': code_mask}
 
-            model(True, **inputs)  # encode negatives and add them to the queue
+            model(True, **inputs, validation=validation)  # encode negatives and add them to the queue
 
         # positive key
         code_id = batch['code_ids'][0].unsqueeze(0).to(torch.device(args.device))
