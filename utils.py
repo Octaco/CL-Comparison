@@ -138,11 +138,12 @@ def calculate_mrr_from_distances(distances_lists):
     return mean_mrr
 
 
-def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisation=False):
+def write_mrr_to_file(args, mrr_before_train, mrr, gen_mrr, runtime=" ", test=False, generalisation=False):
     """
     Custom MRR and hyperparameter logging
 
     :param args:
+    :param mrr_before_train:
     :param mrr:
     :param gen_mrr: generalization MRR
     :param runtime:
@@ -165,20 +166,19 @@ def write_mrr_to_file(args, mrr, gen_mrr, runtime=" ", test=False, generalisatio
             mrr_header += "Generalisation:"
 
         mrr_header += (
-            f"{now}: {args.lang} {args.loss_function} {args.architecture} epochs:{args.epochs} batch_size:{args.batch_size} "
-            f"learning_rate:{args.learning_rate} acccumulation_steps:{args.num_of_accumulation_steps} "
-            f"distractors:{args.num_of_distractors} runtime:{runtime} MRR:{mrr} general_MRR: {gen_mrr}\n")
+            f"{now}: {args.lang} {args.loss_function} {args.architecture} "
+            f"runtime:{runtime} MRR_before_train{mrr_before_train} MRR:{mrr} general_MRR: {gen_mrr}\n")
 
         mrr_new = f"{mrr_old}{mrr_header}"
         file.write(mrr_new)
 
 
-def set_seed(seed, n_gpu):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if n_gpu > 0:
-        torch.cuda.manual_seed_all(seed)
+def set_seed(args):
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.n_gpu > 0:
+        torch.cuda.manual_seed_all(args.seed)
 
 
 def visualize_losses(train_losses, val_losses, args):
@@ -219,23 +219,20 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.figure(figsize=(10, 8))
 
     # Plot query embedding
-    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2)
+    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o')
 
     # Plot positive embedding
-    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='green', label='Positive', zorder=2)
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='red', label='Positive', zorder=3, marker='^')
 
     # Plot negative embeddings
     for i in range(2, len(all_embeddings)):
-        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='red', label='Negative', zorder=1)
+        plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='grey', label='Negative', zorder=1, marker='v')
 
     plt.legend(['Query', 'Positive', 'Negative'])
-
     plt.title('t-SNE Visualization of Embeddings')
-    plt.xlabel('t-SNE Dimension 1')
-    plt.ylabel('t-SNE Dimension 2')
 
     # Save plot
-    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_embeddings{idx}"
+    filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_{args.lang}_{idx}"
     if first_time:
         filepath = args.data_path + filename + ".png"
     else:
@@ -358,12 +355,6 @@ def compute_embeddings_train(args, batch, model, validation=False):
     """
 
     # query = doc
-    if args.loss_function == 'InfoNCE':
-        num_of_negative_samples = args.batch_size - 1
-    else:
-        num_of_negative_samples = 1
-
-
     query_id = batch['doc_ids'][0].to(torch.device(args.device)).unsqueeze(0)
     query_mask = batch['doc_mask'][0].to(torch.device(args.device)).unsqueeze(0)
     inputs = {'input_ids': query_id, 'attention_mask': query_mask}
@@ -419,7 +410,7 @@ def compute_embeddings_train(args, batch, model, validation=False):
             negative_code_key = model_call(args, model, inputs, True)
             negative_keys.append(negative_code_key.clone().detach())
 
-        negative_keys_reshaped = torch.cat(negative_keys[:min(num_of_negative_samples, len(negative_keys))], dim=0)
+        negative_keys_reshaped = torch.cat(negative_keys[:min(args.num_of_negative_samples, len(negative_keys))], dim=0)
 
         logging.debug("keys model output:")
         logging.debug(f"positive key: {positive_code_key.shape}")

@@ -29,11 +29,12 @@ class BiEncoderModel(torch.nn.Module):
 
     def forward(self, is_code_key, input_ids, attention_mask):
         if is_code_key:
-            with torch.no_grad():  # no gradient for the keys
+            with torch.no_grad():
                 output = self.model_k(input_ids=input_ids, attention_mask=attention_mask)
                 # logits = self.prediction_head(output)
                 return output
-        else:
+        else:  # no gradient for the queries
+            # with torch.no_grad():
             output = self.model_q(input_ids=input_ids, attention_mask=attention_mask)
             return output
 
@@ -49,14 +50,10 @@ class MoCoModel(torch.nn.Module):
         super(MoCoModel, self).__init__()
         self.k = args.queue_length
         self.m = args.momentum
+        self.num_of_negative_samples = args.num_of_negative_samples
         self.num_of_distractors = args.num_of_distractors
         self.model_q = RobertaModel.from_pretrained(args.model_name)
         self.model_k = RobertaModel.from_pretrained(args.model_name)
-
-        if args.loss_function == 'InfoNCE':
-            self.num_of_negative_samples = args.batch_size - 1
-        else:
-            self.num_of_negative_samples = 1
 
 
         # queue
@@ -95,7 +92,7 @@ class MoCoModel(torch.nn.Module):
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_distractors))
                 elif validation:
                     negative_keys = random.sample(self.validation_queue, min(len(self.validation_queue), self.num_of_negative_samples))
-                    self._dequeue_and_enqueue(positive_key, use_validation_queue=True)
+                    self._dequeue_and_enqueue(positive_key, True)
                 else:
                     negative_keys = random.sample(self.queue, min(len(self.queue), self.num_of_negative_samples))
                     self._dequeue_and_enqueue(positive_key)
