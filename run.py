@@ -334,7 +334,7 @@ def setup():
                         help="Number of accumulation steps")
     parser.add_argument("--num_of_negative_samples", default=15, type=int, required=False, help="Number of negative "
                                                                                                 "samples")
-    parser.add_argument("--num_of_distractors", default=99, type=int, required=False, help="Number of distractors")
+    parser.add_argument("--num_of_distractors", default=999, type=int, required=False, help="Number of distractors")
     parser.add_argument("--queue_length", default=4096, type=int, required=False, help="MoCo queue length")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=False, type=bool, required=False)
