@@ -77,34 +77,36 @@ def train(args, model, optimizer, training_set, valid_set):
 
         validation_dataloader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=True)
         all_val_losses = []
-        # progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
-        #                     dynamic_ncols=True)
-        # for idx, batch in enumerate(progress_bar):
-        #     if batch['code_ids'].size(0) < args.batch_size:
-        #         logging.debug("continue")
-        #         continue
-        #
-        #     negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model,
-        #                                                                                 validation=True)
-        #
-        #     if args.loss_function == 'InfoNCE':
-        #         loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
-        #     elif args.loss_function == 'triplet':
-        #         negative_key = negative_keys_reshaped[0].unsqueeze(0)
-        #         loss = triplet_loss(query, positive_code_key, negative_key)
-        #     elif args.loss_function == 'ContrastiveLoss':
-        #         # compute loss for positive key
-        #         loss = contrastive_loss(args, query, positive_code_key, 1)
-        #         all_val_losses.append(loss.to("cpu").detach().numpy())
-        #         # compute loss for negative key
-        #         loss = contrastive_loss(args, query, negative_keys_reshaped[0], -1)
-        #     else:
-        #         exit("Loss function not supported")
-        #
-        #     all_val_losses.append(loss.to("cpu").detach().numpy())
-        # val_mean_loss = np.mean(all_val_losses)
-        # all_val_mean_losses.append(val_mean_loss)
-        # logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
+        if args.do_validation:
+
+            progress_bar = tqdm(validation_dataloader, desc=f"Epoch {epoch} eval ", position=2, leave=True,
+                                dynamic_ncols=True)
+            for idx, batch in enumerate(progress_bar):
+                if batch['code_ids'].size(0) < args.batch_size:
+                    logging.debug("continue")
+                    continue
+
+                negative_keys_reshaped, positive_code_key, query = compute_embeddings_train(args, batch, model,
+                                                                                            validation=True)
+
+                if args.loss_function == 'InfoNCE':
+                    loss = info_nce_loss(query, positive_code_key, negative_keys_reshaped)
+                elif args.loss_function == 'triplet':
+                    negative_key = negative_keys_reshaped[0].unsqueeze(0)
+                    loss = triplet_loss(query, positive_code_key, negative_key)
+                elif args.loss_function == 'ContrastiveLoss':
+                    # compute loss for positive key
+                    loss = contrastive_loss(args, query, positive_code_key, 1)
+                    all_val_losses.append(loss.to("cpu").detach().numpy())
+                    # compute loss for negative key
+                    loss = contrastive_loss(args, query, negative_keys_reshaped[0], -1)
+                else:
+                    exit("Loss function not supported")
+
+                all_val_losses.append(loss.to("cpu").detach().numpy())
+            val_mean_loss = np.mean(all_val_losses)
+            all_val_mean_losses.append(val_mean_loss)
+            logging.info(f'Epoch {epoch} - val-Loss: {val_mean_loss}')
 
         del validation_dataloader
 
@@ -234,6 +236,7 @@ def main():
     parser.add_argument("--queue_length", default=4096, type=int, required=False, help="MoCo queue length")
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
+    parser.add_argument("--do_validation", default=True, type=bool, required=False)
 
     args = parser.parse_args()
     args.dataset = 'codebert-base'
