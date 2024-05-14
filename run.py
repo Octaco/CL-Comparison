@@ -307,33 +307,58 @@ def main():
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.learning_rate)
     model.to(torch.device(args.device))
 
+    #####################
     # visualize
+    #####################
     if args.do_visualization:
         print("visualize embeddings__________")
         visualize(args, model, visualization_set, True)
 
+    #####################
     # evaluate
+    #####################
     print("evaluate model_________________")
     distances = predict_distances(args, model, test_set)
 
     mrr_before_train = calculate_mrr_from_distances(distances)
     logging.info(f"MRR Before training: {mrr_before_train}")
 
+    #####################
+    # test generalisation
+    #####################
+    generalisation_mrr = 0
+    if args.do_generalisation:
+        logging.info("Start Generalisation...")
+        generalisation_df = load_stat_code_search_dataset(args)
 
+        generalisation_set = CustomDataset(generalisation_df, args)
+        distances = predict_distances(args, model, generalisation_set)
+
+        generalisation_mrr_before_train = calculate_mrr_from_distances(distances)
+        logging.info(f"Generalisation MRR: {generalisation_mrr}")
+        print(f"gen before train: {generalisation_mrr_before_train}")
+
+    #####################
     # train
+    #####################
     print("train model____________________")
     train_losses, val_losses = train(args, model, optimizer, training_set, valid_set)
 
+    #####################
+    # visualize
+    #####################
     if args.do_visualization:
         # visualize train and val losses
         print("visualize losses_______________")
         visualize_losses(train_losses, val_losses, args)
 
-        # visualize again
+        # visualize embeddings
         print("visualize embeddings___________")
         visualize(args, model, visualization_set, False)
 
+    #####################
     # evaluate
+    #####################
     print("evaluate model_________________")
     distances = predict_distances(args, model, test_set)
 
