@@ -69,7 +69,7 @@ class CustomDataset(TensorDataset):
 
 
 def load_data(args):
-    code_search_dataset = load_dataset('code_search_net', args.lang, trust_remote_code=True)
+    code_search_dataset = load_dataset('code_search_net', args.lang) #, trust_remote_code=True)
 
     # train_data
     train_data = code_search_dataset['train']
@@ -219,10 +219,10 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.figure(figsize=(10, 8))
 
     # Plot query embedding
-    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o', s=150)
+    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o', s=180)
 
     # Plot positive embedding
-    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='red', label='Positive', zorder=3, marker='^', s=150)
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='red', label='Positive', zorder=3, marker='^', s=180)
 
     # Plot negative embeddings
     for i in range(2, len(all_embeddings)):
