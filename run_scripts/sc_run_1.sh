@@ -9,11 +9,12 @@ python3 ./run.py \
     --data_path ./data \
     --lang python \
     --batch_size 8 \
-    --learning_rate 1e-5 \
+    --learning_rate 1e-6 \
     --num_train_epochs 5 \
     --train_size 0.8 \
     --data_path ./data/ \
     --log_level INFO \
     --num_of_accumulation_steps 8 \
     --num_of_distractors 999 \
-    --GPU "$GPU"
+    --GPU "$GPU" \
+    --do_visualization True

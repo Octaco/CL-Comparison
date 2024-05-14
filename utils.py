@@ -219,17 +219,17 @@ def visualize_embeddings(args, idx, query_embedding, positive_embedding, negativ
     plt.figure(figsize=(10, 8))
 
     # Plot query embedding
-    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o')
+    plt.scatter(embeddings_2d[0, 0], embeddings_2d[0, 1], color='blue', label='Query', zorder=2, marker='o', s=150)
 
     # Plot positive embedding
-    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='red', label='Positive', zorder=3, marker='^')
+    plt.scatter(embeddings_2d[1, 0], embeddings_2d[1, 1], color='red', label='Positive', zorder=3, marker='^', s=150)
 
     # Plot negative embeddings
     for i in range(2, len(all_embeddings)):
         plt.scatter(embeddings_2d[i, 0], embeddings_2d[i, 1], color='grey', label='Negative', zorder=1, marker='v')
 
-    plt.legend(['Query', 'Positive', 'Negative'])
-    plt.title('t-SNE Visualization of Embeddings')
+    plt.legend(['Query', 'Positive', 'Negative'], fontsize=20)
+    # plt.title('t-SNE Visualization of Embeddings', fontsize=20)
 
     # Save plot
     filename = f"plots/{args.lang}/{args.architecture}_{args.loss_function}_{args.lang}_{idx}"
