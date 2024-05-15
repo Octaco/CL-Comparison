@@ -198,7 +198,7 @@ def main():
     parser.add_argument("--loss_function", default="InfoNCE", type=str, required=False,
                         help="Loss formulation selected in the list: " + ", ".join(LOSS_FUNCTIONS))
 
-    parser.add_argument("--architecture", default="MoCo", type=str, required=False,
+    parser.add_argument("--architecture", default="Uni", type=str, required=False,
                         help="Learning architecture selected in the list: " + ", ".join(ARCHITECTURES))
 
     parser.add_argument("--tokenizer_name", default="microsoft/codebert-base", type=str,
@@ -210,7 +210,7 @@ def main():
     parser.add_argument("--log_path", default='./logging', type=str, required=False,
                         help="Path to log files")
 
-    parser.add_argument("--lang", default='ruby', type=str, required=False, help="Language of the code")
+    parser.add_argument("--lang", default='python', type=str, required=False, help="Language of the code")
 
     parser.add_argument("--batch_size", default=16, type=int, required=False, help="Training batch size")
 
