@@ -237,7 +237,7 @@ def main():
     parser.add_argument("--GPU", required=False, help="specify the GPU which should be used")
     parser.add_argument("--do_generalisation", default=True, type=bool, required=False)
     parser.add_argument("--do_validation", default=True, type=bool, required=False)
-    parser.add_argument("--do_visualization", default=False, type=bool, required=False)
+    parser.add_argument("--do_visualization", default=True, type=bool, required=False)
 
     args = parser.parse_args()
     args.dataset = 'codebert-base'
