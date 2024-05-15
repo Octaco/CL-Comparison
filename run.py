@@ -271,6 +271,7 @@ def main():
 
     logging.debug("args: %s", args)
     print("loglevel: ", args.log_level)
+    print(f"language: {args.lang}, loss_function: {args.loss_function}, architecture: {args.architecture}")
 
     # Set seed
     set_seed(args)
