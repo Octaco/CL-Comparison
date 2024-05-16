@@ -14,7 +14,6 @@ pabilities of these setups using the StatCodeSearch dataset
 
 # Requirements
 - **Python 3.10 or higher**. The software is written in Python 3.10, and it is not guaranteed to work with older versions of Python.
-- **Nvidia GPU** 
 
 # Installation
 
